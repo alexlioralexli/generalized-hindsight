@@ -92,7 +92,6 @@ class SACTrainer(TorchTrainer):
         # obs = torch.cat([obs, latents], dim=1)
         # next_obs = torch.cat([next_obs, latents], dim=1)
 
-
         """
         Policy and Alpha Loss
         """
@@ -113,7 +112,7 @@ class SACTrainer(TorchTrainer):
             self.qf1(obs, new_obs_actions, latents),
             self.qf2(obs, new_obs_actions, latents),
         )
-        policy_loss = (alpha*log_pi - q_new_actions).mean()
+        policy_loss = (alpha * log_pi - q_new_actions).mean()
 
         """
         QF Loss
@@ -136,6 +135,10 @@ class SACTrainer(TorchTrainer):
         """
         Update networks
         """
+        self.policy_optimizer.zero_grad()
+        policy_loss.backward()
+        self.policy_optimizer.step()
+
         self.qf1_optimizer.zero_grad()
         qf1_loss.backward()
         self.qf1_optimizer.step()
@@ -143,10 +146,6 @@ class SACTrainer(TorchTrainer):
         self.qf2_optimizer.zero_grad()
         qf2_loss.backward()
         self.qf2_optimizer.step()
-
-        self.policy_optimizer.zero_grad()
-        policy_loss.backward()
-        self.policy_optimizer.step()
 
         """
         Soft Updates
