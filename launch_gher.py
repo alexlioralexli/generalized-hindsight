@@ -3,7 +3,6 @@ Launcher for experiments for Generalized Hindsight Experience Replay
 """
 import torch
 import argparse
-import configs.gpu_configs as gpu_configs
 import rlkit.torch.pytorch_util as ptu
 from rlkit.launchers.launcher_util import setup_logger, set_seed, run_experiment
 from rlkit.torch.sac.sac_gher import SACTrainer
@@ -11,7 +10,8 @@ from rlkit.torch.networks import LatentConditionedMlp
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 from rlkit.data_management.task_relabeling_replay_buffer import MultiTaskReplayBuffer
 from rlkit.samplers.data_collector.path_collector import TaskConditionedPathCollector
-from rlkit.torch.sac.policies import MakeDeterministicLatentPolicy, LatentConditionedTanhGaussianPolicy, TanhGaussianPolicy
+from rlkit.torch.sac.policies import MakeDeterministicLatentPolicy, LatentConditionedTanhGaussianPolicy, \
+    TanhGaussianPolicy
 from rlkit.util.hyperparameter import DeterministicHyperparameterSweeper
 
 # relabelers
@@ -30,11 +30,13 @@ from rlkit.envs.wrappers import NormalizedBoxEnv, TimeLimit
 from rlkit.envs.fetch_reach import FetchReachEnv
 from rlkit.envs.updated_ant import AntEnv
 
+NUM_GPUS_AVAILABLE = 4  # change this to the number of gpus on your system
+
 
 def experiment(variant):
-    set_seed(int(args.seed))  #todo: should this be variant['seed']
+    set_seed(int(variant['seed']))
     torch.manual_seed(int(args.seed))
-    if variant['mode'] != 'ec2' and not variant['local_docker']:
+    if variant['mode'] != 'ec2' and not variant['local_docker'] and torch.cuda.is_available():
         ptu.set_gpu_mode(True)
 
     if variant['env_name'] == 'pointmass2':
@@ -118,8 +120,15 @@ def experiment(variant):
     expl_policy = policy
 
     variant['relabeler_kwargs']['discount'] = variant['trainer_kwargs']['discount']
-    relabeler = relabeler_cls(q1=qf1, q2=qf2, action_fn=eval_policy.wrapped_policy, **variant['relabeler_kwargs'])
-    eval_relabeler = relabeler_cls(q1=qf1, q2=qf2, action_fn=eval_policy.wrapped_policy, **variant['relabeler_kwargs'], is_eval=True)
+    relabeler = relabeler_cls(q1=qf1,
+                              q2=qf2,
+                              action_fn=eval_policy.wrapped_policy,
+                              **variant['relabeler_kwargs'])
+    eval_relabeler = relabeler_cls(q1=qf1,
+                                   q2=qf2,
+                                   action_fn=eval_policy.wrapped_policy,
+                                   **variant['relabeler_kwargs'],
+                                   is_eval=True)
     replay_buffer = MultiTaskReplayBuffer(
         env=expl_env,
         relabeler=relabeler,
@@ -129,7 +138,7 @@ def experiment(variant):
         eval_env,
         eval_policy,
         eval_relabeler,
-        is_eval=True, # variant['plot'],  # will attempt to plot if it's the pointmass
+        is_eval=True,  # variant['plot'],  # will attempt to plot if it's the pointmass
         **variant['path_collector_kwargs']
     )
     expl_path_collector = TaskConditionedPathCollector(
@@ -181,7 +190,8 @@ if __name__ == "__main__":
     parser.add_argument('--latent_to_all_layers', action='store_true')
 
     parser.add_argument('--seed', type=int, default=0, help="random seed")
-    parser.add_argument('--n_experiments', '-n', type=int, default=1, help="number of random seeds to use. If not -1, overrides seed ")
+    parser.add_argument('--n_experiments', '-n', type=int, default=-1,
+                        help="number of seeds to use. If not -1, overrides seed ")
     # experiment name
     parser.add_argument('--exp_name', '-name', type=str, default=None)
     parser.add_argument('--extra', '-x', type=str, default=None)
@@ -208,7 +218,6 @@ if __name__ == "__main__":
         seeds = list(range(10, 10 + 10 * args.n_experiments, 10))
     else:
         seeds = [args.seed]
-
 
     assert args.n_to_take <= args.n_sampled_latents
     variant = dict(
@@ -370,7 +379,7 @@ if __name__ == "__main__":
     sweeper = DeterministicHyperparameterSweeper(dict(seed=seeds), variant)
     all_variants = sweeper.iterate_hyperparameters()
     for i, variant in enumerate(all_variants):
-        variant['gpu_id'] = i % gpu_configs.VARYS  #todo: change this
+        variant['gpu_id'] = i % NUM_GPUS_AVAILABLE
     for variant in all_variants:
         if args.ec2:
             run_experiment(experiment, mode='ec2', exp_prefix=exp_dir, variant=variant,
@@ -388,7 +397,6 @@ if __name__ == "__main__":
                            verbose=False,
                            region='us-west-1',
                            num_exps_per_instance=1)
-
         else:
             setup_logger(exp_dir, variant=variant, seed=variant['seed'], **logger_kwargs)
             experiment(variant)

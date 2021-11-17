@@ -205,10 +205,6 @@ class TaskConditionedPathCollector(PathCollector):
         self._render_kwargs = render_kwargs
         self._epoch_paths = deque(maxlen=self._max_num_epoch_paths_saved)
         self.is_eval = is_eval
-        self.plot_pointmass = is_eval and isinstance(relabeler, PointMassBestRandomRelabeler) # False
-        if self.plot_pointmass:
-            self.latents = np.load(osp.expanduser('~/workspace/rlkit/data/eval_plot_latents.npy'))
-            self.latent_grid_rewards = np.load(osp.expanduser('~/workspace/rlkit/data/eval_grid_rew_power1.npy'))
         self.calculate_r_d = calculate_r_d
         self.hide_latent = hide_latent
         self.normalize_performance = normalize_performance
@@ -284,25 +280,6 @@ class TaskConditionedPathCollector(PathCollector):
             logger.save_extra_data(self.eval_traj_infos, 'eval_traj_infos.pkl')
 
         self._epoch_paths = deque(maxlen=self._max_num_epoch_paths_saved)
-        if self.plot_pointmass:
-            paths = []
-            for z in self.latents:
-                path = multitask_rollout_with_relabeler(
-                    self._env,
-                    self._policy,
-                    self._relabeler,
-                    max_path_length=15,
-                    render=self._render,
-                    render_kwargs=self._render_kwargs,
-                    return_dict_obs=False,
-                    latent=z
-                )
-                paths.append(path)
-            self._relabeler.plot_multiple_heatmaps(self.latents, paths, "Epoch" + str(self._epoch),
-                                                   grid_rewards=self.latent_grid_rewards)
-            # save the trajectories (in case I want to do the methods overlaid)
-            np.save(osp.join(logger.get_snapshot_dir(), str(self._epoch)),
-                    np.array([path['observations'] for path in paths]))
         self._epoch += 1
 
     def get_diagnostics(self):
