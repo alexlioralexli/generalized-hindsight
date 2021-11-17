@@ -4,6 +4,7 @@ channels:
 - pytorch
 - anaconda  # for mkl
 dependencies:
+- pip=21.1.2
 - cython
 - ipython  # technically unnecessary
 - joblib=0.9.4

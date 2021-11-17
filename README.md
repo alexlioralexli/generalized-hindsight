@@ -10,6 +10,11 @@ $ source activate rlkit
 (rlkit) $ python examples/ddpg.py
 ```
 Choose the appropriate `.yml` file for your system.
+You may face installation issues, in which case you can try the following (which may go out of date) 
+```
+conda config --append channels conda-forge
+conda env create -f environment/temp.yml
+```
 These Anaconda environments use MuJoCo 1.5 and gym 0.10.5.
 You'll need to [get your own MuJoCo key](https://www.roboti.us/license.html) if you want to use MuJoCo.
 
