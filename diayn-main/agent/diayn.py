@@ -3,10 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-
 from agent import Agent
 import utils
-
 import hydra
 
 
@@ -124,6 +122,7 @@ class DIAYNAgent(Agent):
         self.critic.log(logger, step)
 
     def update_discriminator(self, obs, skill, next_obs, logger, step):
+        next_obs = torch.narrow(next_obs, 1, 0, 2)
         skills_pred = self.discriminator(next_obs * self.obs_dim_weights)
         # TODO(Mahi): Figure out if this line is correct
         skill_actual = skill.argmax(axis=1)
@@ -171,7 +170,26 @@ class DIAYNAgent(Agent):
     def compute_diversity_reward(self, skill, next_obs):
         skills_log_prob = self.skill_dist.log_prob(skill).unsqueeze_(1)
         #print("The shape of next_obs is :  {}, the shape of self.obs_dim_weights is :{}".format(next_obs.shape, self.obs_dim_weights.shape))
-        self.obs_dim_weights = next_obs
+        
+        # self.obs_dim_weights was set to a default of 2. 
+        
+        #Since we are using Alex's RLkit , we can filter the first two
+        next_obs = torch.narrow(next_obs, 1, 0, 2)
+
+        # print("The shape of next_obs is : {}".format(next_obs.size()))
+        # #print("The shape of the array is: {}".format(new_next_obs.size()) )
+        # print(self.obs_dim_weights.size())
+        # #new_next_obs = new_next_obs[:, 0:2] 
+        # print("The next_obs is : {}".format(next_obs))
+        # #print("The new_next_obs is: {}".format(new_next_obs))
+        # # new_next_obs.to(device="cuda")
+
+        # # new_next_obs = next_obs.numpy()
+        # # new_next_obs = new_next_obs[:2]
+        # # print(new_next_obs)
+
+        # THE OBSERVATION SPACE SHOULD NOT BE 111, BUT 2.
+       
         state_prob_logits = self.discriminator(next_obs * self.obs_dim_weights)
         # This part will not work for continuous 
         # log_x_i = ((state_prob_logits * skill).sum(axis=1))

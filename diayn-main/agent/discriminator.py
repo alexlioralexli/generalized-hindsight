@@ -10,7 +10,13 @@ class Discriminator(nn.Module):
     """Discriminator network."""
     def __init__(self, obs_dim, action_dim, skill_dim, skill_type, hidden_dim, hidden_depth):
         super().__init__()
+        # print(obs_dim)
+        # print(skill_dim)
+        # print(hidden_depth)
+        # print(hidden_dim)
 
+        #Needed to hard code this value, CHANGE This. It shouldn't be this way. 
+        obs_dim = 2
         self.model = utils.mlp(obs_dim, hidden_dim, skill_dim, hidden_depth)
 
         self.outputs = dict()

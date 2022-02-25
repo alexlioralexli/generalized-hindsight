@@ -33,11 +33,14 @@ def make_env(cfg):
         domain_name = cfg.env.split('_')[0]
         task_name = '_'.join(cfg.env.split('_')[1:])
 
-    gym_envList = ["Ant-v2", "AntEnv", "HalfCheetahEnv", "PointEnv2", "PointReacherEnv"]
-
+    gym_envList = ["Ant-v2", "HalfCheetahEnv", "PointEnv2", "PointReacherEnv"]
+    rl_kitList = ["AntEnv"]
     if cfg.env in gym_envList:
         env = gym.make(cfg.env)
+    elif cfg.env in rl_kitList: 
+        env = AntEnv()
     else:
+    
         env = dmc2gym.make(domain_name=domain_name,
                         task_name=task_name,
                         seed=cfg.seed,

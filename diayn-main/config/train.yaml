@@ -1,7 +1,7 @@
 defaults:
     - agent: diayn
 
-env:  Ant-v2
+env:  AntEnv
 #env: square
 
 # this needs to be specified manually
