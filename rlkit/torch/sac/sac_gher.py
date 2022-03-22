@@ -196,7 +196,7 @@ class SACTrainer(TorchTrainer):
             ))
             self.eval_statistics.update(create_stats_ordered_dict(
                 'Policy log std',
-                ptu.get_numpy(policy_log_std),
+                ptu.get_numpy(policy_log_std), 
             ))
             if self.use_automatic_entropy_tuning:
                 self.eval_statistics['Alpha'] = alpha.item()

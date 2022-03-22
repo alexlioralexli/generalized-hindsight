@@ -5,6 +5,7 @@ from rlkit.torch.multitask.hand_reach_relabelers import HandRelabeler, FingerRel
 from rlkit.envs.reacher_3dof import ReacherEnv
 from rlkit.envs.point_reacher_env import PointReacherEnv
 from rlkit.envs.point_reacher_env_3d import PointReacherEnv3D
+import utils
 
 
 def multitask_rollout(
@@ -79,6 +80,170 @@ def multitask_rollout(
         goals=np.repeat(goal[None], path_length, 0),
         full_observations=dict_obs,
     )
+
+
+
+def diayn_multitask_rollout_with_relabeler(
+        env,
+        agent,
+        relabeler,
+        max_path_length=np.inf,
+        render=False,
+        render_kwargs=None,
+        observation_key=None,
+        get_action_kwargs=None,
+        return_dict_obs=False,
+        latent=None,
+        calculate_r_d=True,
+        hide_latent=False,
+        fast_rgb=True
+):
+    if render_kwargs is None:
+        render_kwargs = {}
+    if get_action_kwargs is None:
+        get_action_kwargs = {}
+    dict_obs = []
+    dict_next_obs = []
+    observations = []
+    actions = []
+    rewards = []
+    terminals = []
+    agent_infos = []
+    env_infos = []
+    next_observations = []
+    latents = []
+    qpos = []
+    next_qpos = []
+    rgb_array = []
+    skills = []
+    dones = []
+    done_no_max = []
+    path_length = 0
+    agent.reset()
+
+    if hasattr(env, 'sim') and 'fixed' in env.sim.model.camera_names:
+        camera_name = 'fixed'
+    else:
+        camera_name = None
+    if latent is None:
+        latent = relabeler.sample_task()
+        if render:
+            print("Current latent:", latent)
+    if render and (isinstance(relabeler, ReacherRelabelerWithGoal)
+                   or isinstance(relabeler, ReacherRelabelerWithFixedGoal)
+                   or isinstance(relabeler, ReacherRelabelerWithGoalSimple)
+                   or isinstance(relabeler, FetchReachRelabelerWithGoalAndObs)
+                   or isinstance(relabeler, HandRelabeler)
+                   or isinstance(relabeler, FingerRelabeler)):
+        print(relabeler.interpret_latent(latent))
+        goal = relabeler.get_goal(latent)
+        o = env.reset(goal_pos=goal)
+    elif isinstance(env, PointReacherEnv) or isinstance(env, PointReacherEnv3D):
+        goal = relabeler.get_goal(latent)
+        o = env.reset(goal)
+    else:
+        o = env.reset()
+    if render:
+        if render_kwargs['mode'] == 'rgb_array':
+            if not fast_rgb:
+                rgb_array.append(env.wrapped_env.sim.render(500, 500, camera_name=camera_name))
+            # else:
+            #     rgb_array.append(np.zeros((500, 500, 3), dtype=np.uint8))
+        else:
+            env.render(**render_kwargs)
+    if hasattr(agent, 'eval'):
+        agent.eval()
+    while path_length < max_path_length:
+        dict_obs.append(o)
+        if hasattr(env, 'env'):
+            qpos.append(env.env.sim.data.qpos.flat[:2])
+        if observation_key:
+            o = o[observation_key]
+        if hide_latent:
+            latent_input = np.zeros_like(latent)
+        else:
+            latent_input = latent
+
+        
+
+        # HERE IS WHERE YOU NEED TO IMPLEMENT THE STEP LOGIC, FROM THE SKILL DETERMINED BY THE DISCRIMINAOTR
+        skill = utils.to_np(agent.skill_dist.sample())
+
+        
+        """
+            1. Where is the agent coming from?
+            2. Where does the latent_input go away and the action_kwargs
+
+
+
+
+        """
+
+
+        action = self.agent.act(o, skill, sample=True)
+        #a, agent_info = agent.get_action(o, latent_input, **get_action_kwargs)
+
+        next_o, r, d, env_info = env.step(a)
+
+        if calculate_r_d:
+            r, d_new = relabeler.reward_done(o, a, latent, env_info, skill, next_o)
+
+        d = d or d_new
+        rewards.append(r)
+        if hasattr(env, 'env'):
+            next_qpos.append(env.env.sim.data.qpos.flat[:2])
+        if render:
+            if render_kwargs['mode'] == 'rgb_array':
+                if path_length % 3 == 0 or not fast_rgb:
+                    rgb_array.append(env.wrapped_env.sim.render(500, 500, camera_name=camera_name))
+                else:
+                    rgb_array.append(np.zeros((500, 500, 3), dtype=np.uint8))
+            else:
+                env.render(**render_kwargs)
+        # print(o, a, next_o, r, latent, np.array_equal(o, latent))
+        observations.append(o)
+        latents.append(latent)
+        terminals.append(d)
+        actions.append(a)
+        next_observations.append(next_o)
+        dict_next_obs.append(next_o)
+        agent_infos.append(agent_info)
+        env_infos.append(env_info)
+        path_length += 1
+        skills.append(skill)
+        dones.append(done)
+        done_no_max.append(d_new)
+        if d:
+            break
+        o = next_o
+    actions = np.array(actions)
+    if len(actions.shape) == 1:
+        actions = np.expand_dims(actions, 1)
+    observations = np.array(observations)
+    next_observations = np.array(next_observations)
+    latents = np.array(latents)
+    if return_dict_obs:
+        observations = dict_obs
+        next_observations = dict_next_obs
+    result = dict(
+        observations=observations,
+        latents=latents,
+        actions=actions,
+        next_observations=next_observations,
+        terminals=np.array(terminals).reshape(-1, 1),
+        agent_infos=agent_infos,
+        env_infos=env_infos,
+        full_observations=dict_obs,
+        rewards=np.array(rewards).reshape(-1, 1),
+        qpos=np.array(qpos),
+        next_qpos=np.array(next_qpos),
+        skills = skills, 
+        done = dones,
+        done_no_max = done_no_max
+    )
+    if len(rgb_array) > 0 and rgb_array[0] is not None:
+        result['rgb_array'] = np.array(rgb_array)
+    return result
 
 
 def multitask_rollout_with_relabeler(
