@@ -1,0 +1,8 @@
+No personal conf_private.py found.
+doodad not detected
+Traceback (most recent call last):
+  File "launch_diayn.py", line 80, in <module>
+    from rlkit.torch.diayn.diayn_relabelers.diayn_ant_relabeler import DIAYNAntDirectionRelabelerNewSparse
+  File "/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/torch/diayn/diayn_relabelers/diayn_ant_relabeler.py", line 11, in <module>
+    class DIAYNAntDirectionRelabelerNewSparse(AntDirectionRelabelerNew):
+NameError: name 'AntDirectionRelabelerNew' is not defined

@@ -1,0 +1,9 @@
+No personal conf_private.py found.
+doodad not detected
+Traceback (most recent call last):
+  File "launch_diayn.py", line 80, in <module>
+    from rlkit.torch.diayn.diayn_relabelers.diayn_ant_relabeler import DIAYNAntDirectionRelabelerNewSparse
+  File "/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/torch/diayn/diayn_relabelers/diayn_ant_relabeler.py", line 24
+    def reward_done(self, obs, action, latent, env_info=None, skill, next_obs):
+                   ^
+SyntaxError: non-default argument follows default argument

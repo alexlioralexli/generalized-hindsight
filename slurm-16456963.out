@@ -1,0 +1,6 @@
+No personal conf_private.py found.
+doodad not detected
+Traceback (most recent call last):
+  File "launch_diayn.py", line 483, in <module>
+    batch_size=cgf.agent.params.batch_size,
+NameError: name 'cgf' is not defined

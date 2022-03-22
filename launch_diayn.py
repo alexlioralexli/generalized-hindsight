@@ -37,7 +37,7 @@ import pickle as pkl
 
 from video import VideoRecorder
 from logger import Logger
-import diayn-main.utils as diayn-utility
+# import diayn-main.utils as diayn-utility
 
 import dmc2gym
 import hydra
@@ -58,9 +58,9 @@ import rlkit.torch.pytorch_util as ptu
 from rlkit.launchers.launcher_util import setup_logger, set_seed, run_experiment
 from rlkit.torch.sac.sac_gher import SACTrainer
 from rlkit.torch.networks import LatentConditionedMlp
-from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
-from rlkit.data_management.task_relabeling_replay_buffer import MultiTaskReplayBuffer
-from rlkit.samplers.data_collector.path_collector import TaskConditionedPathCollector
+from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm, DIAYNBatchRLAlgorithm
+from rlkit.data_management.task_relabeling_replay_buffer import MultiTaskReplayBuffer, DIAYNTaskReplayBuffer
+from rlkit.samplers.data_collector.path_collector import TaskConditionedPathCollector, DIAYNTaskConditionedPathCollector
 from rlkit.torch.sac.policies import MakeDeterministicLatentPolicy, LatentConditionedTanhGaussianPolicy, \
     TanhGaussianPolicy
 from rlkit.util.hyperparameter import DeterministicHyperparameterSweeper
@@ -74,11 +74,12 @@ from rlkit.torch.multitask.ant_direction_relabeler import AntDirectionRelabelerN
 
 
 #DIAYN 
-from rlkit.torch.diayn.diayn import DIAYNAgent
+from rlkit.torch.diayn.agent.diayn_gher import DIAYNGHERAgent
+
 #DIAYN
-from rlkit.torch.diayn.diayn_ant_relabeler import DIAYNAntDirectionRelabelerNewSparse
+from rlkit.torch.diayn.diayn_relabelers.diayn_ant_relabeler import DIAYNAntDirectionRelabelerNewSparse
 #train.py has the configurations for the networks. 
-from diayn-main.train import Workspace
+# from diayn-main.train import Workspace
 
 
 """
@@ -90,7 +91,6 @@ from diayn-main.train import Workspace
 
 
 #DIAYN Configuration Path: Networks and Training Setup
-@hydra.main(config_path='/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/diayn-main/config/train.yaml', strict=True)
 
 
 
@@ -106,7 +106,17 @@ from rlkit.envs.updated_ant import AntEnv
 NUM_GPUS_AVAILABLE = 4  # change this to the number of gpus on your system
 
 
-def experiment(variant, cfg, args):
+# NEED TO FIX THE PATH:
+
+@hydra.main(config_path='/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/torch/diayn/config/train.yaml', strict=True)
+
+
+
+def experiment(variant, cfg):
+
+
+    agent = hydra.utils.instantiate(cfg.agent)
+
 
     set_seed(int(variant['seed']))
     torch.manual_seed(int(args.seed))
@@ -128,7 +138,7 @@ def experiment(variant, cfg, args):
         eval_env = NormalizedBoxEnv(AntEnv(**variant['env_kwargs']))
 
         #Changing the relabeler to the DIAYN ant relabeler.
-        relabeler_cls = DIAYNAntDirectionRelabelerNewSparse
+        relabeler_cls = DIAYNAntDirectionRelabelerNewSparse(agent)
     elif variant['env_name'] in {'halfcheetahhard'}:
         print("halfcheetah")
         expl_env = NormalizedBoxEnv(HalfCheetahEnv())
@@ -197,25 +207,20 @@ def experiment(variant, cfg, args):
 
 
         #DIAYN instantiate, then you don't need a trainer right?
-    agent = hydra.utils.instantiate(cfg.agent)
 
     
     """
         NEED TO REPLACE THE REPLAY Buffer with GHER ReplayBuffer.
 
     """
-    self.replay_buffer = ReplayBuffer(self.env.observation_space.shape,
-                                          self.env.action_space.shape,
-                                          (cfg.agent.params.skill_dim, ),
-                                          int(cfg.replay_buffer_capacity),
-                                          self.device)
+
 
 
 
     qf1, qf2 = agent.critic.qValueReturn()
 
 
-    #target_qf1, target_qf2 = 
+    target_qf1, target_qf2 = agent.critic_target.qValueReturn()
 
 
     #Network creation -> Can be taken directly from DIAYN. NETWORKs instantiated using train.py
@@ -231,32 +236,22 @@ def experiment(variant, cfg, args):
     #     output_size=1,
     #     **variant['qf_kwargs']
     # )
-    target_qf1 = LatentConditionedMlp(
-        input_size=obs_dim + action_dim,
-        latent_size=latent_dim,
-        output_size=1,
-        **variant['qf_kwargs']
-    )
-    target_qf2 = LatentConditionedMlp(
-        input_size=obs_dim + action_dim,
-        latent_size=latent_dim,
-        output_size=1,
-        **variant['qf_kwargs']
-    )
-
-
+    
 
     #Policy is taken from here:  rlkit.torch.sac.policies
 
 
-    # Policy is just the actor: 
+    # Policy is just the actor:  You need to replace this by the policy network for DIAYN
 
-    policy = LatentConditionedTanhGaussianPolicy(
-        obs_dim=obs_dim,
-        latent_dim=latent_dim,
-        action_dim=action_dim,
-        **variant['policy_kwargs']
-    )
+    # policy = LatentConditionedTanhGaussianPolicy(
+    #     obs_dim=obs_dim,
+    #     latent_dim=latent_dim,
+    #     action_dim=action_dim,
+    #     **variant['policy_kwargs']
+    # )
+
+
+    policy = agent.actor.returnPolicy()
 
     # Eval Policy :  rlkit.torch.sac.policies
 
@@ -332,10 +327,23 @@ def experiment(variant, cfg, args):
 
         CODE TRAIL DONE: for elabeler
 
+
+
+
+        REPLAY BUFFER from DIAYN:
+
+            self.replay_buffer = ReplayBuffer(self.env.observation_space.shape,
+                                          self.env.action_space.shape,
+                                          (cfg.agent.params.skill_dim, ),
+                                          int(cfg.replay_buffer_capacity),
+                                          self.device)
+
     """
-    replay_buffer = MultiTaskReplayBuffer(
+    replay_buffer = DIAYNTaskReplayBuffer(
         env=expl_env,
         relabeler=relabeler,
+        #Added from above, for the skill_dim, additional parameter so that the DIAYN algorithm can train.
+        skill = cfg.agent.params.skill_dim, 
         **variant['replay_buffer_kwargs']
     )
 
@@ -354,15 +362,18 @@ def experiment(variant, cfg, args):
         SHOULD BE UNTOUCHED.
 
 
+        YOU WILL NEED TO CHANGE THE POLICY HERE, AND MAKE SURE THE RELABELER IS BEING USED CORRECTLY
+
+
     """
-    eval_path_collector = TaskConditionedPathCollector(
+    eval_path_collector = DIAYNTaskConditionedPathCollector(
         eval_env,
         eval_policy,
         eval_relabeler,
         is_eval=True,  # variant['plot'],  # will attempt to plot if it's the pointmass
         **variant['path_collector_kwargs']
     )
-    expl_path_collector = TaskConditionedPathCollector(
+    expl_path_collector = DIAYNTaskConditionedPathCollector(
         expl_env,
         expl_policy,
         relabeler,
@@ -372,13 +383,14 @@ def experiment(variant, cfg, args):
 
 
     #trainer is replaced with the agent, MAKE sure you replace all the corresponding methods as well. 
-    algorithm = TorchBatchRLAlgorithm(
+    algorithm = TorchDIAYNBatchRLAlgorithm(
         trainer=trainer,
         exploration_env=expl_env,
         evaluation_env=eval_env,
         exploration_data_collector=expl_path_collector,
         evaluation_data_collector=eval_path_collector,
         replay_buffer=replay_buffer,
+        cfg = cfg,
         **variant['algo_kwargs']
     )
     algorithm.to(ptu.device)
@@ -465,8 +477,10 @@ if __name__ == "__main__":
     variant = dict(
         algorithm=args.alg,
         env_name=args.env,
+
+        #MAKE SURE THAT THE ALGO_KWARDS ARE CORRECT
         algo_kwargs=dict(
-            batch_size=256,
+            batch_size=cgf.agent.params.batch_size,
             num_epochs=args.epochs,
             num_eval_steps_per_epoch=5000,
             num_expl_steps_per_train_loop=75,

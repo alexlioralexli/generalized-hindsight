@@ -1,3 +1,0 @@
-[submodule "pytorch_sac"]
-	path = pytorch_sac
-	url = git@github.com:denisyarats/pytorch_sac.git
