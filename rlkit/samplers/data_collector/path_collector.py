@@ -178,6 +178,9 @@ class GoalConditionedPathCollector(PathCollector):
             observation_key=self._observation_key,
             desired_goal_key=self._desired_goal_key,
         )
+
+
+        
 class DIAYNTaskConditionedPathCollector(PathCollector):
     def __init__(
             self,

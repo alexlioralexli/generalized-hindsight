@@ -58,7 +58,7 @@ import rlkit.torch.pytorch_util as ptu
 from rlkit.launchers.launcher_util import setup_logger, set_seed, run_experiment
 from rlkit.torch.sac.sac_gher import SACTrainer
 from rlkit.torch.networks import LatentConditionedMlp
-from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm, DIAYNBatchRLAlgorithm
+from rlkit.torch.torch_rl_algorithm import TorchDIAYNBatchRLAlgorithm, DIAYNBatchRLAlgorithm
 from rlkit.data_management.task_relabeling_replay_buffer import MultiTaskReplayBuffer, DIAYNTaskReplayBuffer
 from rlkit.samplers.data_collector.path_collector import TaskConditionedPathCollector, DIAYNTaskConditionedPathCollector
 from rlkit.torch.sac.policies import MakeDeterministicLatentPolicy, LatentConditionedTanhGaussianPolicy, \
@@ -118,10 +118,15 @@ class Workspace(object):
     def experiment(self):
         print(f"The agent recognised is: {self.cfg.agent}")
         
+        self.logger = Logger(self.work_dir,
+                            save_tb=self.cfg.log_save_tb,
+                            log_frequency=self.cfg.log_frequency,
+                            agent=self.cfg.agent.name)
+
        
 
         set_seed(int(self.variant['seed']))
-        torch.manual_seed(int(cfg.seed))
+        torch.manual_seed(int(self.cfg.seed))
         if self.variant['mode'] != 'ec2' and not self.variant['local_docker'] and torch.cuda.is_available():
             ptu.set_gpu_mode(True)
 
@@ -140,7 +145,7 @@ class Workspace(object):
             eval_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
 
             #Changing the relabeler to the DIAYN ant relabeler.
-            relabeler_cls = DIAYNAntDirectionRelabelerNewSparse(agent)
+            relabeler_cls = DIAYNAntDirectionRelabelerNewSparse
         elif self.variant['env_name'] in {'halfcheetahhard'}:
             print("halfcheetah")
             expl_env = NormalizedBoxEnv(HalfCheetahEnv())
@@ -352,7 +357,8 @@ class Workspace(object):
             env=expl_env,
             relabeler=relabeler,
             #Added from above, for the skill_dim, additional parameter so that the DIAYN algorithm can train.
-            skill = cfg.agent.params.skill_dim, 
+            skill_dim = self.cfg.agent.params.skill_dim,
+            cfg = self.cfg,  
             **self.variant['replay_buffer_kwargs']
         )
 
@@ -392,13 +398,13 @@ class Workspace(object):
 
 
         algorithm = TorchDIAYNBatchRLAlgorithm(
-            trainer=trainer,
+            trainer=agent,
             exploration_env=expl_env,
             evaluation_env=eval_env,
             exploration_data_collector=expl_path_collector,
             evaluation_data_collector=eval_path_collector,
             replay_buffer=replay_buffer,
-            cfg = cfg,
+            cfg = self.cfg,
             **self.variant['algo_kwargs']
         )
         algorithm.to(ptu.device)
@@ -511,7 +517,7 @@ def main(cfg):
         variant['algo_kwargs']['num_train_loops_per_epoch'] = 1
         variant['algo_kwargs']['num_eval_steps_per_epoch'] = 25000
         variant['algo_kwargs']['min_num_steps_before_training'] = 1000
-        variant['replay_buffer_kwargs']['max_replay_buffer_size'] = int(1E6)
+        variant['replay_buffer_kwargs']['max_replay_buffer_size'] = cfg.max_replay_buffer_size
         variant['qf_kwargs']['hidden_sizes'] = [256, 256]
         variant['policy_kwargs']['hidden_sizes'] = [256, 256]
         variant['env_kwargs'] = dict(use_xy=cfg.use_xy, contact_forces=cfg.contact_forces)

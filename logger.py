@@ -23,7 +23,7 @@ COMMON_EVAL_FORMAT = [
 
 
 AGENT_TRAIN_FORMAT = {
-    'diayn': [
+    'diayn_gher': [
         ('batch_reward', 'BR', 'float'),
         ('actor_loss', 'ALOSS', 'float'),
         ('critic_loss', 'CLOSS', 'float'),

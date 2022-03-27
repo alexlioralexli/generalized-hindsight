@@ -12,7 +12,8 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             self,
             max_replay_buffer_size,
             env,
-            skill, 
+            skill_dim, 
+            cfg, 
             relabeler,
             latent_dim,
             normalize_rewards=False,
@@ -46,6 +47,20 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             obs_dim = env.observation_space.low.size
 
         self.latent_dim = latent_dim
+
+        print(f"Type of latent dim: {type(latent_dim)}")
+        print(latent_dim)
+  
+        # max_replay_buffer_size = 1e6
+
+        """
+            MAX REPLAY BUFFER IS SET HERE:
+
+        """
+        max_replay_buffer_size = cfg.max_replay_buffer_size
+        print(f"Type of max replay : {type(max_replay_buffer_size)}")
+        print(max_replay_buffer_size)
+
         self._latents = np.zeros((max_replay_buffer_size, latent_dim))
         self.relabeler = relabeler
 
@@ -106,7 +121,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
 
 
         """
-        self._skills = np.zeros((max_replay_buffer_size, *skill_shape))
+        self._skills = np.zeros((max_replay_buffer_size, skill_dim))
         self._not_dones = np.zeros((max_replay_buffer_size, 1))
         self._not_dones_no_max = np.zeros((max_replay_buffer_size, 1))
   

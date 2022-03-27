@@ -8,9 +8,9 @@ env:  AntEnv
 #env: square
 
 # this needs to be specified manually
-experiment: AntEnv with GHER
+experiment: test_exp
 
-num_train_steps: 5e6
+num_train_steps: 1000000
 replay_buffer_capacity: ${num_train_steps}
 
 num_seed_steps: 5000
@@ -30,6 +30,8 @@ save_video: true
 
 seed: 1
 
+
+max_replay_buffer_size : ${num_train_steps}
 
 
 # GHER ARGPARSERS. SETTING THEM UP WITH DEFAULT VALUES:
@@ -70,7 +72,7 @@ truncate_obs: true
 use_xy: true 
 contact_forces: true 
 directiontype : 360
-
+# latent_dim: 3
 
 
 

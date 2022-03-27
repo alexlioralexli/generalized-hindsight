@@ -94,10 +94,10 @@ class DIAYNAntDirectionRelabelerNewSparse(AntDirectionRelabelerNew):
         Then you can understand DIAYN reward fits.
 
     """
-    def __init__(self, agent):
-        self.agent = agent
-        self.sample_task = None
-        self.diversity_reward = None
+    # def __init__(self):
+    #     self.agent = agent
+    #     self.sample_task = None
+    #     self.diversity_reward = None
 
 
     def reward_done(self, obs, action, latent, skill, next_obs, env_info=None):
