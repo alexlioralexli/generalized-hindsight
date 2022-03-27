@@ -75,8 +75,9 @@ class DIAYNGHERAgent(Agent):
                  actor_update_frequency, critic_lr, critic_betas, critic_tau, 
                  critic_target_update_frequency, discriminator_lr, 
                  discriminator_betas, discriminator_update_frequency, 
-                 batch_size, learnable_temperature, log_frequency, log_save_tb, name_env):
+                 batch_size, learnable_temperature, log_frequency, log_save_tb, name_env, max_replay_buffer_size, plotter=None,render_eval_paths=False,use_automatic_entropy_tuning = True):
         super().__init__()
+        
         
 
         self.action_range = action_range
@@ -153,30 +154,30 @@ class DIAYNGHERAgent(Agent):
 
         #WHAT NEEDS TO BE DONE WITH ENTROPY TUNING
         
-        if self.use_automatic_entropy_tuning:
-            if target_entropy:
-                self.target_entropy = target_entropy
-            else:
-                self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
-            self.log_alpha = ptu.zeros(1, requires_grad=True)
-            self.alpha_optimizer = optimizer_class(
-                [self.log_alpha],
-                lr=policy_lr,
-            )
+        # if self.use_automatic_entropy_tuning:
+        #     if target_entropy:
+        #         self.target_entropy = target_entropy
+        #     else:
+        #         self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
+        #     self.log_alpha = ptu.zeros(1, requires_grad=True)
+        #     self.alpha_optimizer = optimizer_class(
+        #         [self.log_alpha],
+        #         lr=policy_lr,
+        #     )
 
         # END FROM SAC_GHER
 
 
         # FROM TRAIN.PY in main-diayn 
 
-        self.work_dir = os.getcwd()
-        print(f'workspace: {self.work_dir}')
+        # self.work_dir = os.getcwd()
+        # print(f'workspace: {self.work_dir}')
 
-        #Logger Inputs cleaned
-        self.logger = Logger(self.work_dir,
-                             save_tb=log_save_tb,
-                             log_frequency=log_frequency,
-                             agent=name)
+        # #Logger Inputs cleaned
+        # self.logger = Logger(self.work_dir,
+        #                      save_tb=log_save_tb,
+        #                      log_frequency=log_frequency,
+        #                      agent=name)
         
         # FROM THE TRAINER IN sac_gher
 
@@ -184,13 +185,13 @@ class DIAYNGHERAgent(Agent):
 
 
         #RETURN FUNCTION FOR THE NETWORKS TAKEN FROM GHER"
-        self.policy = self.critic.returnPolicy()
+        self.policy = self.actor.returnPolicy()
         self.qf1, self.qf2 = self.critic.qValueReturn()
         
         self.target_qf1, self.target_qf2 = self.critic_target.qValueReturn()
 
 
-        self.train()
+        self.trainParamSet()
         self.critic_target.train()
 
 
@@ -201,11 +202,14 @@ class DIAYNGHERAgent(Agent):
     #     self.actor.train(training)
     #     self.critic.train(training)
 
-    #FROM GHER
-    def train(self, np_batch, training = True):
+    def trainParamSet(self, training=True):
         self.training = training
         self.actor.train(training)
         self.critic.train(training)
+    #FROM GHER
+    
+    def train(self, np_batch, training = True):
+       
         self._num_train_steps += 1
         batch = np_to_pytorch_batch(np_batch)
         self.update(batch, self.logger, self._num_train_steps)
