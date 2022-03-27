@@ -24,7 +24,6 @@ source /ext3/env.sh
 ## FOR GYM USE 210, for HYDRA use 200
 export LD_LIBRARY_PATH=/home/yb1025/.mujoco/mujoco210/bin:\$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/.singularity.d/libs:\$LD_LIBRARY_PATH
-python launch_diayn.py --epochs 1000 --env AntEnv 
+python launch_diayn.py
 "
-
 
