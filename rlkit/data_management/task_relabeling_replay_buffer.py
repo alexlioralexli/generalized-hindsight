@@ -32,19 +32,17 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         self.env = env
         self._action_space = env.action_space
         self._observation_space = env.observation_space
-        if isinstance(self.env.action_space, Discrete):
-            action_dim = env.action_space.n
-        else:
-            action_dim = env.action_space.low.size
-
-
 
 
         # MIGHT NEED TO CHANGE THIS FOR THE RLKIT
         if isinstance(self.env.observation_space, Discrete) or isinstance(self.env.observation_space, MultiBinary):
             obs_dim = env.observation_space.n
+            action_dim = env.action_space.n
+
         else:
             obs_dim = env.observation_space.low.size
+            action_dim = env.action_space.low.size
+
 
         self.latent_dim = latent_dim
 
@@ -367,6 +365,10 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         if self.permute_relabeling:
             self.handle_permuting()
 
+
+    def selected_batch(self, batch_size):
+        #Select the correct index, COMPUTEDIVERSITY_REWARD NEEDS TO BE THE SAME. 
+        
 
     def random_batch(self, batch_size):
         indices = np.random.randint(0, self._size, batch_size)

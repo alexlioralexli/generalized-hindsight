@@ -241,7 +241,6 @@ def diayn_multitask_rollout_with_relabeler(
         agent_infos.append(agent_info)
         env_infos.append(env_info)
         path_length += 1
-        skills.append(skill)
         dones.append(done)
         done_no_max.append(d_new)
         if d:
@@ -268,7 +267,7 @@ def diayn_multitask_rollout_with_relabeler(
         rewards=np.array(rewards).reshape(-1, 1),
         qpos=np.array(qpos),
         next_qpos=np.array(next_qpos),
-        skills = skills, 
+        skill = skill, 
         done = dones,
         done_no_max = done_no_max
     )

@@ -69,7 +69,7 @@ safetyfn: newlog
 energyfn: velocity
 energyfactor: 1.0
 truncate_obs: true 
-use_xy: true 
+use_xy: false 
 contact_forces: true 
 directiontype : 360
 # latent_dim: 3

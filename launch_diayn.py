@@ -141,8 +141,10 @@ class Workspace(object):
 
         elif self.variant['env_name'] == "AntEnv":
             print(self.variant['env_name'])
-            expl_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
-            eval_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
+            # expl_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
+            # eval_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
+            expl_env = AntEnv()
+            eval_env = AntEnv()
 
             #Changing the relabeler to the DIAYN ant relabeler.
             relabeler_cls = DIAYNAntDirectionRelabelerNewSparse
@@ -183,6 +185,12 @@ class Workspace(object):
             float(expl_env.action_space.low.size),
             float(expl_env.action_space.high.size)
         ]
+
+        print(f"Observation space with DIAYN print statement: {expl_env.observation_space.shape[0]}")
+
+
+        print(f"OBERSVATION SPACE:self.env.observation_space.shape {expl_env.observation_space.shape}")
+        print(f"OBERSVATION SPACE:expl_env.observation_space.low.size {expl_env.observation_space.low.size}")
 
         """
             INSTANTIATING AGENT OBJECT: TAKEN FROM DIAYN, LOOK AT HYDRA FILE
@@ -385,6 +393,7 @@ class Workspace(object):
             eval_env,
             eval_policy,
             eval_relabeler,
+            agent, 
             is_eval=True,  # variant['plot'],  # will attempt to plot if it's the pointmass
             **self.variant['path_collector_kwargs']
         )
@@ -392,6 +401,7 @@ class Workspace(object):
             expl_env,
             expl_policy,
             relabeler,
+            agent,
             # calculate_rewards=False,
             **self.variant['path_collector_kwargs']
         )
@@ -520,7 +530,7 @@ def main(cfg):
         variant['replay_buffer_kwargs']['max_replay_buffer_size'] = cfg.max_replay_buffer_size
         variant['qf_kwargs']['hidden_sizes'] = [256, 256]
         variant['policy_kwargs']['hidden_sizes'] = [256, 256]
-        variant['env_kwargs'] = dict(use_xy=cfg.use_xy, contact_forces=cfg.contact_forces)
+        variant['env_kwargs'] = dict(use_xy=True, contact_forces=cfg.contact_forces)
         exp_postfix = 'horizon{}'.format(variant['algo_kwargs']['max_path_length'])
     elif cfg.env in {'halfcheetahhard'}:
         variant['replay_buffer_kwargs']['latent_dim'] = 4

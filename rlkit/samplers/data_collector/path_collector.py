@@ -187,6 +187,7 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
             env,
             policy,
             relabeler,
+            agent,
             max_num_epoch_paths_saved=None,
             render=False,
             render_kwargs=None,
@@ -212,6 +213,7 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
         self._num_steps_total = 0
         self._num_paths_total = 0
         self._epoch = 0
+        self.agent = agent
 
         # for video saving
         self.save_video = save_videos and not self.is_eval and hasattr(relabeler, 'to_save_video')
@@ -241,7 +243,7 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
             )
             path = diayn_multitask_rollout_with_relabeler(
                 self._env,
-                self._policy,
+                self.agent,
                 self._relabeler,
                 max_path_length=max_path_length_this_loop,
                 render=render,

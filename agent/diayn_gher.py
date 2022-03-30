@@ -344,6 +344,8 @@ class DIAYNGHERAgent(Agent):
         not_done = batch['not_done']
         not_dones_no_max =  batch['not_dones_no_max']
 
+        diversity_reward = batch['diversity_reward']
+
 
         #3 ARE MISSING:
         """ 
@@ -366,8 +368,12 @@ class DIAYNGHERAgent(Agent):
 
         # TODO(Mahi): Figure out the correct reward here.
         # Reward should be log q_phi(z | s_t+1) - log p(z)
-        diversity_reward = self.compute_diversity_reward(skill, next_obs)
-        assert reward.shape == diversity_reward.shape
+        # DIVERSITY REWARD IS NOW BEING SAMPLED FROM THE REPLAY BUFFER
+
+        # diversity_reward = self.compute_diversity_reward(skill, next_obs)
+        # assert reward.shape == diversity_reward.shape
+
+
 
         logger.log('train/batch_reward', diversity_reward.mean(), step)
 
