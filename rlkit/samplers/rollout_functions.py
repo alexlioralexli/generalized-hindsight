@@ -6,7 +6,7 @@ from rlkit.envs.reacher_3dof import ReacherEnv
 from rlkit.envs.point_reacher_env import PointReacherEnv
 from rlkit.envs.point_reacher_env_3d import PointReacherEnv3D
 import utils
-
+import torch
 
 def multitask_rollout(
         env,
@@ -153,6 +153,11 @@ def diayn_multitask_rollout_with_relabeler(
             env.render(**render_kwargs)
     if hasattr(agent, 'eval'):
         agent.eval()
+
+
+    skill = utils.to_np(agent.skill_dist.sample())
+    skill_diversity = torch.as_tensor(skill, device=device).float()
+
     while path_length < max_path_length:
         dict_obs.append(o)
         if hasattr(env, 'env'):
@@ -164,29 +169,55 @@ def diayn_multitask_rollout_with_relabeler(
         else:
             latent_input = latent
 
+        device = torch.device("cuda")
+
+        # HERE IS WHERE YOU NEED TO IMPLEMENT THE STEP LOGIC, FROM THE SKILL DETERMINED BY THE DISCRIMINATER, SKILL IS ALSO SAMPLED IN FLOAT
+        # print(f"Skill is, from distribution: {skill}")
+        # print(f"Shape of skill from distribution is {type(skill)}")
+        # print(f"Skill diversity is, from distribution: {skill_diversity}")
+        # print(f"Shape diversity of skill from distribution is: {skill_diversity.size}")
+
         
 
-        # HERE IS WHERE YOU NEED TO IMPLEMENT THE STEP LOGIC, FROM THE SKILL DETERMINED BY THE DISCRIMINAOTR
-        skill = utils.to_np(agent.skill_dist.sample())
 
         
         """
             1. Where is the agent coming from?
             2. Where does the latent_input go away and the action_kwargs
-
-
-
-
         """
 
 
-        action = self.agent.act(o, skill, sample=True)
-        #a, agent_info = agent.get_action(o, latent_input, **get_action_kwargs)
+        a = agent.act(o, skill, sample=True)
 
+        """
+            DIAYN AGENT IS MESSED UP, SAME VALUES:[8.00 8.00 8.00 8.00 8.00 8.00 8.00 8.00]
+        """       
         next_o, r, d, env_info = env.step(a)
+        # next_obs = next_o[:29]
+        print(f"The next_o is : {next_o}")
+        next_obs = torch.as_tensor(next_o, device=device).float()
+        print(f"The next_obs is : {next_obs}")
+        print(f"The next_obs is : {next_obs.shape}")
 
+
+
+        #Calculate diversity_reward
+        """
+            Normally, the diversity reward was being calculated for the next_obs
+            Here we have passed, o
+            next_obs was leading to some errors. 
+
+            #LOGIC CLEANUP
+
+        """
+        # print(f"Skill passed in GHER+ DIAYN is : {skill}")
+        # print(f"The skill is : {skill_diversity}, the next_obs is : {next_obs}")
+        print(f"The shape of skill is : {skill_diversity.shape}, the next_obs is : {next_obs.shape}")
+
+
+        diversity_reward = agent.compute_diversity_reward(skill_diversity, next_obs)
         if calculate_r_d:
-            r, d_new = relabeler.reward_done(o, a, latent, env_info, skill, next_o)
+            r, d_new = relabeler.reward_done(o, a, latent, env_info, skill, next_o, diversity_reward)
 
         d = d or d_new
         rewards.append(r)
@@ -324,7 +355,9 @@ def multitask_rollout_with_relabeler(
         else:
             latent_input = latent
         a, agent_info = agent.get_action(o, latent_input, **get_action_kwargs)
+        # print(f"Action in VANILLA GHER is: {a}, type is : {type(a)}")
         next_o, r, d, env_info = env.step(a)
+        # print(f"The next_obs is : {}")
         if calculate_r_d:
             r, d_new = relabeler.reward_done(o, a, latent, env_info)
         d = d or d_new
