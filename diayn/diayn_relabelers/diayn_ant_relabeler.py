@@ -100,13 +100,14 @@ class DIAYNAntDirectionRelabelerNewSparse(AntDirectionRelabelerNew):
     #     self.diversity_reward = None
 
 
-    def reward_done(self, obs, action, latent, skill, next_obs, env_info=None):
-        # theta = float(latent[0])
-        # speed = np.linalg.norm(env_info['torso_velocity'][:2])
-        # cosine = (env_info['torso_velocity'][:2] / speed).dot(np.array([np.cos(theta), np.sin(theta)]))
+    def reward_done(self, obs, action, latent, skill, next_obs, diversity_reward, env_info=None):
+        theta = float(latent[0])
+        print(f"env: info {env_info['torso_velocity']}")
+        print(f"Env info, when sliced: {env_info['torso_velocity'][:2]} ")
+        speed = np.linalg.norm(env_info['torso_velocity'][:2])
+        cosine = (env_info['torso_velocity'][:2] / speed).dot(np.array([np.cos(theta), np.sin(theta)]))
         # reward_run = speed * (cosine > 0.9659).astype(np.float32) + env_info['reward_ctrl'] + env_info['reward_contact'] + 1
-        # reward_run = speed * (cosine > 0.9659).astype(np.float32) + env_info['reward_ctrl'] + env_info['reward_contact'] + 1
-        reward_run = speed * self.agent.compute_diversity_reward(skill, next_obs) + env_info['reward_ctrl'] + env_info['reward_contact'] + 1
+        reward_run = speed * diversity_reward + env_info['reward_ctrl'] + env_info['reward_contact'] + 1
 
         return reward_run, False
 
