@@ -71,7 +71,7 @@ class DiagGaussianActor(nn.Module):
 
     def returnPolicy(self):
         return self.trunk
-    def forward(self, obs, skill):
+    def forward(self, obs, skill, returnDeterministic=False):
         assert obs.size(0) == skill.size(0)
         obs_skill = torch.cat([obs, skill], dim=-1)
 
@@ -85,10 +85,16 @@ class DiagGaussianActor(nn.Module):
 
         std = log_std.exp()
 
-        self.outputs['mu'] = mu
+        self.outputs['mu'] = mu # DETERMINISTIC IS JUST MU, 
         self.outputs['std'] = std
 
+        if returnDeterministic:
+            return mu 
+
         dist = SquashedNormal(mu, std)
+
+
+
         return dist
 
     def log(self, logger, step):

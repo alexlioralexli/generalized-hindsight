@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=gher-ant
+#SBATCH --job-name=diGH-Ant
 #SBATCH --open-mode=append
 #SBATCH --export=ALL
 #SBATCH --time=3:00:00

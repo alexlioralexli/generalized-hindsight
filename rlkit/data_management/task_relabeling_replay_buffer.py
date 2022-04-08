@@ -307,6 +307,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 # label based on the best normalized
                 latents, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
             elif self.approx_irl:
+                # print(f"KEYS for the path before irl : {paths[0].keys()}")
                 latents, rewards = self.relabeler.approx_irl_relabeling(paths)
             else:
                 raise RuntimeError
@@ -366,8 +367,6 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             self.handle_permuting()
 
 
-    def selected_batch(self, batch_size):
-        #Select the correct index, COMPUTEDIVERSITY_REWARD NEEDS TO BE THE SAME. 
         
 
     def random_batch(self, batch_size):

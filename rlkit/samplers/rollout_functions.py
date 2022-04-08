@@ -154,10 +154,9 @@ def diayn_multitask_rollout_with_relabeler(
     if hasattr(agent, 'eval'):
         agent.eval()
 
-
+    device = torch.device("cuda")
     skill = utils.to_np(agent.skill_dist.sample())
     skill_diversity = torch.as_tensor(skill, device=device).float()
-
     while path_length < max_path_length:
         dict_obs.append(o)
         if hasattr(env, 'env'):
@@ -169,7 +168,7 @@ def diayn_multitask_rollout_with_relabeler(
         else:
             latent_input = latent
 
-        device = torch.device("cuda")
+        
 
         # HERE IS WHERE YOU NEED TO IMPLEMENT THE STEP LOGIC, FROM THE SKILL DETERMINED BY THE DISCRIMINATER, SKILL IS ALSO SAMPLED IN FLOAT
         # print(f"Skill is, from distribution: {skill}")
@@ -194,10 +193,10 @@ def diayn_multitask_rollout_with_relabeler(
         """       
         next_o, r, d, env_info = env.step(a)
         # next_obs = next_o[:29]
-        print(f"The next_o is : {next_o}")
+        # print(f"The next_o is : {next_o}")
         next_obs = torch.as_tensor(next_o, device=device).float()
-        print(f"The next_obs is : {next_obs}")
-        print(f"The next_obs is : {next_obs.shape}")
+        # print(f"The next_obs is : {next_obs}")
+        # print(f"The next_obs is : {next_obs.shape}")
 
 
 
@@ -212,13 +211,36 @@ def diayn_multitask_rollout_with_relabeler(
         """
         # print(f"Skill passed in GHER+ DIAYN is : {skill}")
         # print(f"The skill is : {skill_diversity}, the next_obs is : {next_obs}")
-        print(f"The shape of skill is : {skill_diversity.shape}, the next_obs is : {next_obs.shape}")
+        # print(f"The shape of skill is : {skill_diversity.shape}, the next_obs is : {next_obs.shape}")
 
 
-        diversity_reward = agent.compute_diversity_reward(skill_diversity, next_obs)
+        """
+            1. SINGLE SKILL
+            2. 1000 steps -> skill, next_obs, 1000 compute_rewards. 
+            3. dict -> path_collector -> replay_buffer -> 1000 STEPS, Same Skill, r -> 1000 diff. 
+
+        """
+        """
+            skill in the train.py for ORG DIAYN
+
+            1. update -> replay_buffer -> computes diversity reward,
+
+            1024 29, 1024 4 (skill)
+
+            -> update_critic()
+
+
+
+            skill -> 4, next_obs -> 29, = FIRST TWO VALUES, if contact_forces is true, but the policy loses information
+
+            ASK MAHI FOR CONTACT FORCES OR NOT, THEN ASK FOR CORRECT MUJOCOpy VERSION.
+
+
+
+        """
         if calculate_r_d:
-            r, d_new = relabeler.reward_done(o, a, latent, env_info, skill, next_o, diversity_reward)
-
+            # r, d_new = relabeler.reward_done()
+            r, d_new = relabeler.reward_done(o, a, latent, skill_diversity, next_obs)
         d = d or d_new
         rewards.append(r)
         if hasattr(env, 'env'):
@@ -238,11 +260,12 @@ def diayn_multitask_rollout_with_relabeler(
         actions.append(a)
         next_observations.append(next_o)
         dict_next_obs.append(next_o)
-        agent_infos.append(agent_info)
+        # agent_infos.append(agent_info)
         env_infos.append(env_info)
         path_length += 1
-        dones.append(done)
+        # dones.append(done)
         done_no_max.append(d_new)
+        skills.append(skill)
         if d:
             break
         o = next_o
@@ -261,14 +284,14 @@ def diayn_multitask_rollout_with_relabeler(
         actions=actions,
         next_observations=next_observations,
         terminals=np.array(terminals).reshape(-1, 1),
-        agent_infos=agent_infos,
+        # agent_infos=agent_infos,
         env_infos=env_infos,
         full_observations=dict_obs,
         rewards=np.array(rewards).reshape(-1, 1),
         qpos=np.array(qpos),
         next_qpos=np.array(next_qpos),
-        skill = skill, 
-        done = dones,
+        skills = skills, 
+        # done = dones,
         done_no_max = done_no_max
     )
     if len(rgb_array) > 0 and rgb_array[0] is not None:

@@ -252,6 +252,7 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
                 calculate_r_d=self.calculate_r_d,
                 hide_latent=self.hide_latent
             )
+            # print(f"Path keys in collect paths is : {path.keys()}")
             path_len = len(path['actions'])
             if (
                     path_len != max_path_length

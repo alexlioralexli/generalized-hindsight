@@ -300,14 +300,39 @@ class DIAYNGHERAgent(Agent):
             alpha_loss.backward()
             self.log_alpha_optimizer.step()
 
+    def compute_lone_diversity_reward(self, skill, next_obs):
+        next_obs = next_obs[:2]
+        skills_log_prob = self.skill_dist.log_prob(skill)
+        state_prob_logits = self.discriminator(next_obs * self.obs_dim_weights)
+        # print(f"state_prob_logits is: {state_prob_logits}, the shape is : {state_prob_logits.shape}")
+        # print(f"skill is: {skill}, the shape is : {skill.shape}")
+
+        log_x_i = torch.sum(state_prob_logits * skill, dim=0, keepdim=True)
+        logsumexp_x = torch.logsumexp(state_prob_logits, dim=0, keepdim=True)
+        discriminator_prob = log_x_i - logsumexp_x
+
+        # print(f"discriminator_prob is: {discriminator_prob}, discriminator shape is : {discriminator_prob.shape}")
+        # print(f"skills_log_prob is : {skills_log_prob}, skills_log_prob shape is : {skills_log_prob.shape}")
+        return discriminator_prob - skills_log_prob, False 
     def compute_diversity_reward(self, skill, next_obs):
+        device = torch.device("cuda")
+
+
+        if (isinstance(skill, list)):
+            skill = torch.as_tensor(skill, device = device).float()
+            next_obs = torch.from_numpy(next_obs).float().to(device)
+
+        
+        
         skills_log_prob = self.skill_dist.log_prob(skill).unsqueeze_(1)
+        # print(f"The unsqueeze shape is : {skill.unsqueeze_(1)}")
         #print("The shape of next_obs is :  {}, the shape of self.obs_dim_weights is :{}".format(next_obs.shape, self.obs_dim_weights.shape))
         
+
         # self.obs_dim_weights was set to a default of 2. 
         
         #Since we are using Alex's RLkit , we can filter the first two
-        next_obs = torch.narrow(next_obs, 1, 0, 2)
+        next_obs = torch.narrow(next_obs, 1, 0, 2) # -> [1024, 29] -> [1024, 2]
 
         # print("The shape of next_obs is : {}".format(next_obs.size()))
         # #print("The shape of the array is: {}".format(new_next_obs.size()) )
@@ -329,6 +354,8 @@ class DIAYNGHERAgent(Agent):
         log_x_i = torch.sum(state_prob_logits * skill, dim=1, keepdim=True)
         logsumexp_x = torch.logsumexp(state_prob_logits, dim=1, keepdim=True)
         discriminator_prob = log_x_i - logsumexp_x
+        reward = discriminator_prob - skills_log_prob
+        # print(f"Reward is : {discriminator_prob - skills_log_prob}, reward shape is : {reward.shape}")
         return discriminator_prob - skills_log_prob
 
     def update(self, batch, logger, step):
@@ -340,7 +367,11 @@ class DIAYNGHERAgent(Agent):
         actions = batch['actions']
         next_obs = batch['next_observations']
         latents = batch['latents']
-        skill = batch['skill']
+        
+        
+        skill = batch['skill']  #256 4 
+
+
         not_done = batch['not_done']
         not_dones_no_max =  batch['not_dones_no_max']
 
@@ -370,8 +401,8 @@ class DIAYNGHERAgent(Agent):
         # Reward should be log q_phi(z | s_t+1) - log p(z)
         # DIVERSITY REWARD IS NOW BEING SAMPLED FROM THE REPLAY BUFFER
 
-        # diversity_reward = self.compute_diversity_reward(skill, next_obs)
-        # assert reward.shape == diversity_reward.shape
+        diversity_reward = self.compute_diversity_reward(skill, next_obs)
+        assert reward.shape == diversity_reward.shape
 
 
 

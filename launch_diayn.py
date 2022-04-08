@@ -141,10 +141,10 @@ class Workspace(object):
 
         elif self.variant['env_name'] == "AntEnv":
             print(self.variant['env_name'])
-            # expl_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
-            # eval_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
-            expl_env = AntEnv()
-            eval_env = AntEnv()
+            expl_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
+            eval_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
+            # expl_env = AntEnv()
+            # eval_env = AntEnv()
 
             #Changing the relabeler to the DIAYN ant relabeler.
             relabeler_cls = DIAYNAntDirectionRelabelerNewSparse
@@ -198,7 +198,8 @@ class Workspace(object):
 
 
         agent = hydra.utils.instantiate(self.cfg.agent)
-        
+
+    
 
         #ALGORITHM: SETUP : ADD CASES AND CONTROL FLOW LATER ON
 
@@ -272,9 +273,15 @@ class Workspace(object):
         #     **variant['policy_kwargs']
         # )
 
+        policy = LatentConditionedTanhGaussianPolicy(
+            obs_dim=obs_dim,
+            latent_dim=latent_dim,
+            action_dim=action_dim,
+            **self.variant['policy_kwargs']
+        )
 
-        policy = agent.actor.returnPolicy()
 
+        
         # Eval Policy :  rlkit.torch.sac.policies
 
         eval_policy = MakeDeterministicLatentPolicy(policy)
@@ -335,7 +342,13 @@ class Workspace(object):
                                     action_fn=eval_policy.wrapped_policy,
                                     **self.variant['relabeler_kwargs'],
                                     is_eval=True)
+        
 
+        """
+            Add control flow for adding agent into the relabeler
+
+        """
+        relabeler.agent = agent
 
 
         # MULTI TASK RELABELER: 
@@ -479,6 +492,7 @@ def main(cfg):
             n_sampled_latents=cfg.n_sampled_latents,
             n_to_take=cfg.n_to_take,
             cache=cfg.cache,
+
         ),
         qf_kwargs=dict(
             hidden_sizes=[300, 300, 300],
