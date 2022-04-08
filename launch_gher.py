@@ -49,7 +49,7 @@ def experiment(variant):
         expl_env = NormalizedBoxEnv(PointEnv2(**variant['env_kwargs']))
         eval_env = NormalizedBoxEnv(PointEnv2(**variant['env_kwargs']))
         relabeler_cls = PointMassBestRandomRelabeler
-    elif variant['env_name'] in {'antdirectionnewsparse'}:
+    elif variant['env_name'] == "AntEnv":
         print(variant['env_name'])
         expl_env = NormalizedBoxEnv(AntEnv(**variant['env_kwargs']))
         eval_env = NormalizedBoxEnv(AntEnv(**variant['env_kwargs']))
@@ -292,7 +292,7 @@ if __name__ == "__main__":
         variant['algo_kwargs']['batch_size'] = 128
         variant['qf_kwargs']['hidden_sizes'] = [400, 300]
         variant['policy_kwargs']['hidden_sizes'] = [400, 300]
-    elif args.env in {'antdirectionnewsparse'}:
+    elif args.env == "AntEnv":
         variant['replay_buffer_kwargs']['latent_dim'] = 1
         if args.env in {'antdirectionnewsparse'}:
             assert args.directiontype in {'90', '180', '360'}

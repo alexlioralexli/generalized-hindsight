@@ -94,32 +94,47 @@ class DIAYNAntDirectionRelabelerNewSparse(AntDirectionRelabelerNew):
         Then you can understand DIAYN reward fits.
 
     """
-    # def __init__(self):
-    #     self.agent = agent
-    #     self.sample_task = None
-    #     self.diversity_reward = None
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.agent = None
+        # self.sample_task = None
+        # self.diversity_reward = None
 
 
     def reward_done(self, obs, action, latent, skill, next_obs, env_info=None):
+
+
+        #USE AGENT HERE NOT THE, DON'T PASS DIVERSITY      
         # theta = float(latent[0])
+        # print(f"env: info {env_info['torso_velocity']}")
+        # print(f"Env info, when sliced: {env_info['torso_velocity'][:2]} ")
         # speed = np.linalg.norm(env_info['torso_velocity'][:2])
         # cosine = (env_info['torso_velocity'][:2] / speed).dot(np.array([np.cos(theta), np.sin(theta)]))
         # reward_run = speed * (cosine > 0.9659).astype(np.float32) + env_info['reward_ctrl'] + env_info['reward_contact'] + 1
-        # reward_run = speed * (cosine > 0.9659).astype(np.float32) + env_info['reward_ctrl'] + env_info['reward_contact'] + 1
-        reward_run = speed * self.agent.compute_diversity_reward(skill, next_obs) + env_info['reward_ctrl'] + env_info['reward_contact'] + 1
+        reward_run = self.agent.compute_lone_diversity_reward(skill, next_obs)
 
         return reward_run, False
 
 
     def calculate_path_reward(self, path, latent):
-        env_infos = path['env_infos']
-        ctrl_rewards = np.array([env_info['reward_ctrl'] for env_info in env_infos])
-        contact_rewards = np.array([env_info['reward_contact'] for env_info in env_infos])
-        theta = float(latent[0])
-        torso_velocities = np.array([env_info['torso_velocity'][:2] for env_info in env_infos])
-        speeds = np.linalg.norm(torso_velocities, axis=1, keepdims=True)
-        cosines = (torso_velocities / speeds).dot((np.array([np.cos(theta), np.sin(theta)])).reshape([-1, 1])).flatten()
-        rewards = speeds.flatten() * self.agent.compute_diversity_reward(skill, next_obs) + ctrl_rewards + contact_rewards + 1
+        # env_infos = path['env_infos']
+        # ctrl_rewards = np.array([env_info['reward_ctrl'] for env_info in env_infos])
+        # contact_rewards = np.array([env_info['reward_contact'] for env_info in env_infos])
+        # theta = float(latent[0])
+        # torso_velocities = np.array([env_info['torso_velocity'][:2] for env_info in env_infos])
+        # speeds = np.linalg.norm(torso_velocities, axis=1, keepdims=True)
+        # cosines = (torso_velocities / speeds).dot((np.array([np.cos(theta), np.sin(theta)])).reshape([-1, 1])).flatten()
+        # rewards = speeds.flatten() * self.agent.compute_diversity_reward(skill, next_obs) + ctrl_rewards + contact_rewards + 1
+        print(f"Keys are : {path.keys()}")
+        # print(f"The next_observations are: {path["next_observations"]}")
+        # print(f"The shape of next_observations are: {path["next_observations"].shape}")
+        print(f"The type of path is : {type(path)}")
+        # print(f"The skills are: {path["skills"]}")
+        # print(f"The shape of skills are: {path["skills"].shape}")
+
+
+        rewards = self.agent.compute_diversity_reward(path["skills"], path["next_observations"])
+
         return rewards
 
     def get_features(self, path, latent=None):

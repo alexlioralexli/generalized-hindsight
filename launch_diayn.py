@@ -143,6 +143,8 @@ class Workspace(object):
             print(self.variant['env_name'])
             expl_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
             eval_env = NormalizedBoxEnv(AntEnv(**self.variant['env_kwargs']))
+            # expl_env = AntEnv()
+            # eval_env = AntEnv()
 
             #Changing the relabeler to the DIAYN ant relabeler.
             relabeler_cls = DIAYNAntDirectionRelabelerNewSparse
@@ -184,13 +186,20 @@ class Workspace(object):
             float(expl_env.action_space.high.size)
         ]
 
+        print(f"Observation space with DIAYN print statement: {expl_env.observation_space.shape[0]}")
+
+
+        print(f"OBERSVATION SPACE:self.env.observation_space.shape {expl_env.observation_space.shape}")
+        print(f"OBERSVATION SPACE:expl_env.observation_space.low.size {expl_env.observation_space.low.size}")
+
         """
             INSTANTIATING AGENT OBJECT: TAKEN FROM DIAYN, LOOK AT HYDRA FILE
         """
 
 
         agent = hydra.utils.instantiate(self.cfg.agent)
-        
+
+    
 
         #ALGORITHM: SETUP : ADD CASES AND CONTROL FLOW LATER ON
 
@@ -264,9 +273,15 @@ class Workspace(object):
         #     **variant['policy_kwargs']
         # )
 
+        policy = LatentConditionedTanhGaussianPolicy(
+            obs_dim=obs_dim,
+            latent_dim=latent_dim,
+            action_dim=action_dim,
+            **self.variant['policy_kwargs']
+        )
 
-        policy = agent.actor.returnPolicy()
 
+        
         # Eval Policy :  rlkit.torch.sac.policies
 
         eval_policy = MakeDeterministicLatentPolicy(policy)
@@ -327,7 +342,13 @@ class Workspace(object):
                                     action_fn=eval_policy.wrapped_policy,
                                     **self.variant['relabeler_kwargs'],
                                     is_eval=True)
+        
 
+        """
+            Add control flow for adding agent into the relabeler
+
+        """
+        relabeler.agent = agent
 
 
         # MULTI TASK RELABELER: 
@@ -385,6 +406,7 @@ class Workspace(object):
             eval_env,
             eval_policy,
             eval_relabeler,
+            agent, 
             is_eval=True,  # variant['plot'],  # will attempt to plot if it's the pointmass
             **self.variant['path_collector_kwargs']
         )
@@ -392,6 +414,7 @@ class Workspace(object):
             expl_env,
             expl_policy,
             relabeler,
+            agent,
             # calculate_rewards=False,
             **self.variant['path_collector_kwargs']
         )
@@ -469,6 +492,7 @@ def main(cfg):
             n_sampled_latents=cfg.n_sampled_latents,
             n_to_take=cfg.n_to_take,
             cache=cfg.cache,
+
         ),
         qf_kwargs=dict(
             hidden_sizes=[300, 300, 300],
@@ -520,7 +544,7 @@ def main(cfg):
         variant['replay_buffer_kwargs']['max_replay_buffer_size'] = cfg.max_replay_buffer_size
         variant['qf_kwargs']['hidden_sizes'] = [256, 256]
         variant['policy_kwargs']['hidden_sizes'] = [256, 256]
-        variant['env_kwargs'] = dict(use_xy=cfg.use_xy, contact_forces=cfg.contact_forces)
+        variant['env_kwargs'] = dict(use_xy=True, contact_forces=cfg.contact_forces)
         exp_postfix = 'horizon{}'.format(variant['algo_kwargs']['max_path_length'])
     elif cfg.env in {'halfcheetahhard'}:
         variant['replay_buffer_kwargs']['latent_dim'] = 4

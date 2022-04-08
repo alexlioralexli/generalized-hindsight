@@ -82,6 +82,9 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 self.min_num_steps_before_training,
                 discard_incomplete_paths=False,
             )
+            # print(f"KEYS OF ORIGINAL init paths are: {len(init_expl_paths)}")
+            # print(f"the first index is a : {type(init_expl_paths)}")
+            # print(f"THE KEYS OF THE FIRST INDEX ARE: {init_expl_paths[0].keys()}")
             self.replay_buffer.add_paths(init_expl_paths)
             self.expl_data_collector.end_epoch(-1)
 
@@ -106,6 +109,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
 
 
                 #THE ADD_PATHS, should return the new data points in the replay_buffer, : skills, not_done, not_done_no_max.
+                print(f"new_expl_paths keys are: {new_expl_paths.keys()}")
 
                 self.replay_buffer.add_paths(new_expl_paths)
                 gt.stamp('data storing', unique=False)

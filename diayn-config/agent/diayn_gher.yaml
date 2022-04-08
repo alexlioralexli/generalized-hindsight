@@ -35,6 +35,7 @@ agent:
     plotter: None
     render_eval_paths: false
     use_automatic_entropy_tuning: true 
+    algorithm: DIAYN
 
     
 double_q_critic:
