@@ -4,6 +4,7 @@ import torch
 from gym import spaces
 import matplotlib
 matplotlib.use('Agg')
+# import utils
 
 class DIAYNRelabeler(object):
     def __init__(self,
@@ -14,6 +15,7 @@ class DIAYNRelabeler(object):
                  subtract_final_value=False,
                  q1=None,
                  q2=None,
+                 agent=None,
                  vf=None,
                  action_fn=None,
                  test=False,
@@ -30,6 +32,8 @@ class DIAYNRelabeler(object):
         self.test = test
         self.subtract_final_value = subtract_final_value
         self.sliding_normalization = sliding_normalization
+
+        self.agent = agent
 
         if self.use_adv:
             assert (q1 is not None and q2 is not None and action_fn is not None) or vf is not None
@@ -74,9 +78,7 @@ class DIAYNRelabeler(object):
         # print(f"Type Study: Type of self.discount : {type(self.discount)}, Type of reward_list: {type(reward_list)}, Type of data type: {reward_list.dtype}")
         multipliers = np.power(self.discount, np.arange(len(rewards)))
         result = np.sum(rewards * multipliers)
-        print(f"The result obtained is: {result}" )
 
-        #TOO HIGH IN THE CASE OF RANDOM RELABELER
 
 
         # VALUE STUDY -> COMPARE IT IN THE ORIGINAL GHER + DIAYN 
@@ -98,18 +100,93 @@ class DIAYNRelabeler(object):
             estimate = ptu.get_numpy(torch.min(self.q1(obs, actions, latent), self.q2(obs, actions, latent)))
         return estimate
 
-    def get_baseline_estimates(self, obs, latents):
-        v1, v2 = self.get_both_values(obs, latents)
+    def get_baseline_estimates(self, obs, skills):
+        v1, v2 = self.get_both_values(obs, skills)
         return np.minimum(v1, v2)
 
-    def get_both_values(self, obs, latents):
-        obs, latent = ptu.from_numpy(obs).unsqueeze(0).repeat(len(latents), 1), ptu.from_numpy(latents)
+    def get_both_values(self, obs, skills):
+        """
+            SKILLS NEEDS TO BE A 2D TENSOR
+            OBS NEEDS TO BE A REPEAT, FOR THE SKILLS
+            ACTIONS need to be a result of the multiple skills for the same OBS.
 
-        actions = self.action_fn(obs, latent, deterministic=True)[0]
-        print(f"Actions from action_fn are as follows: {actions}")
+
+        """
+        device = torch.device("cuda")
+
+        print(f"Skills received is : {skills}, its shape is: {skills.shape}")
+
+        #CONVERTING SKILLS TO PROPER SHAPE AND TENSOR. 
+        skill_array = []
+        for index in range(skills.shape[0]):
+            skill_array.append(skills[index].tolist())
+
+        skill_tensor = torch.DoubleTensor(skill_array).to(device)
+        print(f"Skill tensor is : {skill_tensor}, the shape is : {skill_tensor.shape}")
+        obs_tensor = torch.from_numpy(obs).type(torch.DoubleTensor).unsqueeze(0).repeat(len(skills), 1).to(device)
+        print(f"obs_tensor obs_tensor is : {obs_tensor}, the shape is : {obs_tensor.shape}")
+
+        action_list = []
+        for index in range(len(skills)):
+            action_np = self.agent.act(obs, skills[index], sample=True)
+            action_pyList = action_np.tolist()
+            action_list.append(action_pyList)
+        action_tensor = torch.DoubleTensor(action_list).to(device)
+        print(f"action_tensor is : {action_tensor}, the shape is : {action_tensor.shape}")
+
+
+
+
+
+        # print(f"Type of skills is : {type(skills)}, skills is: {skills.shape}, {skills}")
+        # new_skills = []
+        # for skill in skills:
+        #    new_skill = skill.cpu().detach().numpy()
+        #    new_skills.append(new_skill)
+
+        # print(f"new skills: {new_skills}")
+
+        # print(f"Obs first value is {obs}, then the skills value is : {skills[0]}")
+
+
         
-        return ptu.get_numpy(self.q1(obs, actions, latent)), ptu.get_numpy(self.q2(obs, actions, latent))
+        # obs = ptu.from_numpy(obs).unsqueeze(0).repeat(len(skills), 1)
 
+        # print(f"OBS from np repeat is: {obs}")
+        #print(f"Agent in get_both_values : {self.agent}")
+        # action_list = []
+        # for index in range(len(skills)):
+        #     action_list.append(utils.to_np(self.agent.act(obs, skills[index], sample=True)))
+
+        # action_list = np.asarray(action_list)
+
+        # print(f"type of action list: {action_list}")
+        
+        # action_torch = torch.from_numpy(action_list).type(torch.DoubleTensor).to(device)
+        # print(f"Actions from action_fn are as follows: {actions}")
+        # obs_torch = torch.from_numpy(obs).type(torch.DoubleTensor).unsqueeze(0).repeat(len(skills), 1).to(device)
+        # print(f"Actions from action_fn are as follows: {actions}")
+        # print(f"Type of the actions is: {type(actions)}")
+        #obs_torch = torch.from_numpy(obs).type(torch.DoubleTensor).to(device)
+        # actions_torch = torch.from_numpy(actions_list).type(torch.DoubleTensor).to(device)
+        
+        
+        #skills_torch = torch.tensor(skills).type(torch.DoubleTensor).to(device)
+        # print(f"dtype for obs_torch :{obs_torch.dtype}")
+        # print(f"dtype for actions_torch :{type(actions_list_torch)}")
+        # print(f"dtype for skills_torch :{skills.dtype}")
+        # print(f"Skills torch : {skills[0]}")
+        # print(f"Actions torch: {actions_list_torch}")
+        # print(f"Obs torch : {obs_torch}")
+
+        obs_action_skill = torch.cat([obs_tensor, action_tensor, skill_tensor], dim=-1).float().to(device)
+        # obs_action_skill = obs_action_skill.t()
+        
+        print(f"OBSACTIONSKILL INFO is: {obs_action_skill}, its shape is : {obs_action_skill.shape}, its type is: {type(obs_action_skill)}, its dtype is : {obs_action_skill.dtype}")
+
+
+        # return ptu.get_numpy(self.agent.critic.Q1(obs_action_skill)), ptu.get_numpy(self.agent.critic.Q2(obs_action_skill))
+        return ptu.get_numpy(self.agent.critic.Q1(obs_action_skill)), ptu.get_numpy(self.agent.critic.Q2(obs_action_skill))
     def get_latents_and_rewards(self, path):
         raise NotImplementedError
 
@@ -124,7 +201,7 @@ class DIAYNRandomRelabeler(DIAYNRelabeler):
         self.n_to_take = n_to_take
         self.do_cem = do_cem
         self.cem_itrs = cem_itrs
-        self.n_cem_elites = n_cem_elitess
+        self.n_cem_elites = n_cem_elites
         
 
     def get_latents_and_rewards(self, path):
@@ -187,22 +264,38 @@ class DIAYNRandomRelabeler(DIAYNRelabeler):
         pass
 
     def approx_irl_relabeling(self, paths):
-        print(f"Self.relabel is : {self.relabel}")
+        device = torch.device("cuda")
         assert self.relabel
+
         if self.n_sampled_latents == 1:
-            latents = [self.sample_task()]
+            skills = self.agent.skill_dist.sample()
+           #skills = [utils.to_np(self.agent.skill_dist.sample())]
+
+
         else:
-            latents = [self.sample_task() for _ in range(self.n_sampled_latents - len(paths))]
-        for path in paths:
-            latents.append(path['latents'][0])
+            skills = [self.agent.skill_dist.sample() for _ in range(self.n_sampled_latents - len(paths))]
+
+
+        print(f"Skills received is :{skills}")
+            #skills = [utils.to_np(self.agent.skill_dist.sample()) for _ in range(self.n_sampled_latents - len(paths))]
+        # print(f"SKILLS from sample: {self.agent.skill_dist.sample()}")
+        # util_skill = utils.to_np(self.agent.skill_dist.sample())
+        # print(f"SKILLS USING UTILTON: {util_skill}")
+        # print(f"SKILLS FROM TENSOR AS WELL {torch.as_tensor(util_skill, device=device).float()}")
+        # print(f"SKILLS AFTER TEDETACH IS FROM SAMPLE IS: {skills}")
+
+        # for path in paths:
+        #     skills.append(path['skills'][0])
+
+
         # latents = [np.concatenate([latent, np.array([np.pi, 0.25])]) for latent in x]
         # form matrix with |paths| rows x |latents| cols
         if self.cache:
             #new_paths = remove_extra_trajectory_info(paths)
             self.cached_paths = (paths + self.cached_paths)[:500]
-            reward_matrix = self.get_reward_matrix(self.cached_paths, latents)
+            reward_matrix = self.get_reward_matrix(self.cached_paths, skills)
         else:
-            reward_matrix = self.get_reward_matrix(paths, latents)
+            reward_matrix = self.get_reward_matrix(paths, skills)
         '''
         array([[ 6,  0,  3],
                 [14,  7, 12]])
@@ -210,7 +303,13 @@ class DIAYNRandomRelabeler(DIAYNRelabeler):
         array([[1, 2, 0],
            [1, 2, 0]])
         '''
-        best_latents = []
+        best_skills = []
+
+        """
+            NEED TO CHANGE CALCULATE PATH TRAJECTORY, TO SINGULAR, SO THAT IT USES THE CORRECT SKILL
+            FOR REWARD CALCULATION, NOT THE ONE ASSOCIATED WITH PATH BUT WITH BEST SKILL
+
+        """
 
         # strategy with percentiles
         temp = reward_matrix.T.argsort()
@@ -223,20 +322,29 @@ class DIAYNRandomRelabeler(DIAYNRelabeler):
                 # best_latent_index = np.argmax(ranks[i])
                 winners = np.argwhere(ranks[i] == np.amax(ranks[i]))
                 if len(winners) == 1:
-                    best_latent_index = winners[0]
-                    best_latents.append(latents[int(best_latent_index)])
+                    best_skill_index = winners[0]
+                    best_skills.append(latents[int(best_skill_index)])
                 else:
                     winnner_traj_rewards = reward_matrix[i, winners]
                     if self.use_adv:  # break ties by traj advantage
-                        baselines = self.get_baseline_estimates(path['observations'][0], np.array([latents[int(winner)] for winner in winners])).flatten()
-                        advantages = winnner_traj_rewards.flatten() - baselines
-                        best_latent_index = winners[np.argmax(advantages)]
-                    else:  # break ties by traj reward
-                        best_latent_index = winners[np.argmax(winnner_traj_rewards)]  # break ties by traj reward
+                        """
+                            IN NORMAL GHER CODE, the getbaseline estimates uses 
+                            latent vector and obs tensors, both are 2d 
+                            to calculate action function and value functions
 
-                    best_latents.append(latents[int(best_latent_index)])
-            return [[z] for z in best_latents], \
-                   [[self.calculate_path_reward(path, latent)] for path, latent in zip(paths, best_latents)]
+                            Our skill can only take in 1D vectors for skill and 
+                            obs
+
+                        """
+                        baselines = self.get_baseline_estimates(path['observations'][0], np.array([skills[int(winner)] for winner in winners])).flatten()
+                        advantages = winnner_traj_rewards.flatten() - baselines
+                        best_skill_index = winners[np.argmax(advantages)]
+                    else:  # break ties by traj reward
+                        best_skill_index = winners[np.argmax(winnner_traj_rewards)]  # break ties by traj reward
+
+                    best_skills.append(skills[int(best_skill_index)])
+            return [[z] for z in best_skills], \
+                   [[self.calculate_path_reward(path, skill)] for path, skill in zip(paths, best_skills)]
         else:
             sorted_indices = ranks.argsort(axis=1)  # goes from low to high
             for i, path in enumerate(paths):
@@ -251,30 +359,30 @@ class DIAYNRandomRelabeler(DIAYNRelabeler):
                     winners = np.argwhere(ranks[i] == np.amax(ranks[i]))
                     winnner_traj_rewards = reward_matrix[i, winners]
                     if self.use_adv:  # break ties by traj advantage
-                        baselines = self.get_baseline_estimates(path['observations'][0], np.array([latents[int(winner)] for winner in winners])).flatten()
+                        baselines = self.get_baseline_estimates(path['observations'][0], np.array([skills[int(winner)] for winner in winners])).flatten()
                         advantages = winnner_traj_rewards.flatten() - baselines
                         scores = advantages
                     else:  # break ties by traj reward
                         scores = winnner_traj_rewards
                     top_ntotake_indices = scores.argsort()[-self.n_to_take:]  # break ties by either traj reward or advantage
                     top_indices = [winners[int(idx)] for idx in top_ntotake_indices]
-                    best_latents.append([latents[int(idx)] for idx in top_indices])
+                    best_skills.append([skills[int(idx)] for idx in top_indices])
                 else:  # case 3 or 4, group of maxes has size < n_to_take
                     # need to get the size of the group strictly better
-                    best_latents.append([latents[sorted_indices[i, -j]] for j in range(1, n_taken + 1)])
-                    n_needed = self.n_to_take - len(best_latents)
+                    best_skills.append([skills[sorted_indices[i, -j]] for j in range(1, n_taken + 1)])
+                    n_needed = self.n_to_take - len(best_skills)
                     winners = np.argwhere(ranks[i] == nth_largest)
                     winnner_traj_rewards = reward_matrix[i, winners]
                     if self.use_adv:  # break ties by traj advantage
-                        baselines = self.get_baseline_estimates(path['observations'][0], np.array([latents[int(winner)] for winner in winners])).flatten()
+                        baselines = self.get_baseline_estimates(path['observations'][0], np.array([skills[int(winner)] for winner in winners])).flatten()
                         advantages = winnner_traj_rewards.flatten() - baselines
                         scores = advantages
                     else:  # break ties by traj reward
                         scores = winnner_traj_rewards
                     top_ntotake_indices = scores.argsort()[-n_needed:]  # break ties by either traj reward or advantage
                     top_indices = [winners[int(idx)] for idx in top_ntotake_indices]
-                    best_latents[-1].extend([latents[int(idx)] for idx in top_indices])
-            return best_latents, [[self.calculate_path_reward(path, z) for z in lat_list] for path, lat_list in zip(paths, best_latents)]
+                    best_skills[-1].extend([latents[int(idx)] for idx in top_indices])
+            return best_skills, [[self.calculate_path_reward(path, z) for z in lat_list] for path, lat_list in zip(paths, best_skills)]
 
 
     def get_reward_matrix(self, paths, latents):
@@ -360,11 +468,17 @@ class Relabeler(object):
         return np.minimum(v1, v2)
 
     def get_both_values(self, obs, latents):
+        print(f"Latents is : {type(latents)}, its shape is : {latents.shape}, print for latent : {latents}")
+        print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
+
         obs, latent = ptu.from_numpy(obs).unsqueeze(0).repeat(len(latents), 1), ptu.from_numpy(latents)
+        print(f"AFTER RESHAPE")
+        print(f"latent is : {type(latent)}, its shape is : {latent.shape}, print for latent : {latent}")
+        print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
 
         actions = self.action_fn(obs, latent, deterministic=True)[0]
-        print(f"Actions from action_fn are as follows: {actions}")
-        
+        # print(f"Actions from action_fn are as follows: {actions}")
+        print(f"THE RESULTS OF THE V1, V2 are: {self.q1(obs, actions, latent).shape} , {self.q1(obs, actions, latent).shape}")
         return ptu.get_numpy(self.q1(obs, actions, latent)), ptu.get_numpy(self.q2(obs, actions, latent))
 
     def get_latents_and_rewards(self, path):
@@ -381,7 +495,7 @@ class RandomRelabeler(Relabeler):
         self.n_to_take = n_to_take
         self.do_cem = do_cem
         self.cem_itrs = cem_itrs
-        self.n_cem_elites = n_cem_elitess
+        self.n_cem_elites = n_cem_elites
         
 
     def get_latents_and_rewards(self, path):
@@ -446,12 +560,17 @@ class RandomRelabeler(Relabeler):
     def approx_irl_relabeling(self, paths):
         print(f"Self.relabel is : {self.relabel}")
         assert self.relabel
+
+        print(f"EXAMPLE OF SAMPLED TASK IN LATENTS: {self.sample_task()}")
         if self.n_sampled_latents == 1:
             latents = [self.sample_task()]
         else:
             latents = [self.sample_task() for _ in range(self.n_sampled_latents - len(paths))]
+        print(f"LATENTS, before path : {latents}, the shape is: {len(latents)}")
         for path in paths:
             latents.append(path['latents'][0])
+        print(f"LATENTS, after path : {latents}the shape is: {len(latents)}")
+
         # latents = [np.concatenate([latent, np.array([np.pi, 0.25])]) for latent in x]
         # form matrix with |paths| rows x |latents| cols
         if self.cache:

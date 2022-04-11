@@ -186,11 +186,11 @@ class Workspace(object):
             float(expl_env.action_space.high.size)
         ]
 
-        print(f"Observation space with DIAYN print statement: {expl_env.observation_space.shape[0]}")
+        # print(f"Observation space with DIAYN print statement: {expl_env.observation_space.shape[0]}")
 
 
-        print(f"OBERSVATION SPACE:self.env.observation_space.shape {expl_env.observation_space.shape}")
-        print(f"OBERSVATION SPACE:expl_env.observation_space.low.size {expl_env.observation_space.low.size}")
+        # print(f"OBERSVATION SPACE:self.env.observation_space.shape {expl_env.observation_space.shape}")
+        # print(f"OBERSVATION SPACE:expl_env.observation_space.low.size {expl_env.observation_space.low.size}")
 
         """
             INSTANTIATING AGENT OBJECT: TAKEN FROM DIAYN, LOOK AT HYDRA FILE
@@ -265,7 +265,7 @@ class Workspace(object):
 
 
         # Policy is just the actor:  You need to replace this by the policy network for DIAYN
-
+        policy = agent.actor.returnPolicy()
         # policy = LatentConditionedTanhGaussianPolicy(
         #     obs_dim=obs_dim,
         #     latent_dim=latent_dim,
@@ -273,12 +273,7 @@ class Workspace(object):
         #     **variant['policy_kwargs']
         # )
 
-        policy = LatentConditionedTanhGaussianPolicy(
-            obs_dim=obs_dim,
-            latent_dim=latent_dim,
-            action_dim=action_dim,
-            **self.variant['policy_kwargs']
-        )
+
 
 
         
@@ -335,10 +330,12 @@ class Workspace(object):
         self.variant['relabeler_kwargs']['discount'] = self.variant['trainer_kwargs']['discount']
         relabeler = relabeler_cls(q1=qf1,
                                 q2=qf2,
+                                agent=agent, 
                                 action_fn=eval_policy.wrapped_policy,
                                 **self.variant['relabeler_kwargs'])
         eval_relabeler = relabeler_cls(q1=qf1,
                                     q2=qf2,
+                                    agent=agent, 
                                     action_fn=eval_policy.wrapped_policy,
                                     **self.variant['relabeler_kwargs'],
                                     is_eval=True)
@@ -348,7 +345,7 @@ class Workspace(object):
             Add control flow for adding agent into the relabeler
 
         """
-        relabeler.agent = agent
+        # relabeler.agent = agent
 
 
         # MULTI TASK RELABELER: 
@@ -377,6 +374,7 @@ class Workspace(object):
         replay_buffer = DIAYNTaskReplayBuffer(
             env=expl_env,
             relabeler=relabeler,
+            agent=agent,
             #Added from above, for the skill_dim, additional parameter so that the DIAYN algorithm can train.
             skill_dim = self.cfg.agent.params.skill_dim,
             cfg = self.cfg,  

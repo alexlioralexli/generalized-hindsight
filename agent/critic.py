@@ -21,6 +21,7 @@ class DoubleQCritic(nn.Module):
         assert obs.size(0) == action.size(0)
         assert obs.size(0) == skill.size(0)
 
+
         obs_action_skill = torch.cat([obs, action, skill], dim=-1)
         q1 = self.Q1(obs_action_skill)
         q2 = self.Q2(obs_action_skill)

@@ -10,6 +10,7 @@ from rlkit.core import logger
 class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
     def __init__(
             self,
+            agent,
             max_replay_buffer_size,
             env,
             skill_dim, 
@@ -22,7 +23,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             plot=False,
             dads=False,
             approx_irl=False,
-            hide_latent=False,
+            hide_skill=False,
             permute_relabeling=False,
             add_random_relabeling=False
     ):
@@ -32,6 +33,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         self.env = env
         self._action_space = env.action_space
         self._observation_space = env.observation_space
+        self.agent = agent
 
 
         # MIGHT NEED TO CHANGE THIS FOR THE RLKIT
@@ -70,6 +72,8 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         # but it makes the code *much* easier since you no longer have to
         # worry about termination conditions.
         self._next_obs = np.zeros((max_replay_buffer_size, obs_dim))
+        
+        #self._skills = np.zeros((max_replay_buffer_size, 4))
         self._actions = np.zeros((max_replay_buffer_size, action_dim))
         # Make everything a 2D np array to make it easier for other code to
         # reason about the shape of the data
@@ -83,7 +87,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         self.grid_normalize = grid_normalize
         self.on_policy = on_policy
         self.dads = dads
-        self.hide_latent = hide_latent
+        self.hide_skill = hide_skill
         self.permute_relabeling = permute_relabeling
         self.add_random_relabeling = add_random_relabeling
         self.permutation_list = []
@@ -128,7 +132,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
     def add_sample(self, observation, action, reward, terminal, next_observation, **kwargs):
         raise NotImplementedError("Only use add_path")
 
-    def add_single_sample(self, latent, observation, action, reward, terminal, next_observation, **kwargs):
+    def add_single_sample(self, latent, observation, action, reward, terminal, next_observation, skills, **kwargs):
         if isinstance(self._action_space, Discrete):
             action = np.eye(self._action_space.n)[action]
         self._observations[self._top] = observation
@@ -137,6 +141,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         self._terminals[self._top] = terminal
         self._latents[self._top] = latent
         self._next_obs[self._top] = next_observation
+        self._skills[self._top] = skills
         self._advance()
 
     def add_single_dads_sample(self, latent, observation, action, terminal, next_observation, qpos, next_qpos):
@@ -163,15 +168,22 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
 
     def add_path(self, path):
         # add with original z and resampled z
-        original_z = path["latents"][0]
-        resampled_zs, reward_list, ranked_latents = self.relabeler.get_latents_and_rewards(path)
+
+
+        """
+
+            ORIGINAL -> z, how do we replace it with the skill vector
+
+        """
+        original_z = path["skills"][0]
+        resampled_zs, reward_list, ranked_latents = self.relabeler.get_skills_and_rewards(path)
         if self.permute_relabeling:
             self.permutation_list.append((path, resampled_zs[0]))
         if not any([np.array_equal(original_z, z) for z in resampled_zs]):
             resampled_zs.append(original_z)
             reward_list.append(self.relabeler.calculate_path_reward(path, original_z))
         if self.add_random_relabeling:
-            random_z = self.relabeler.sample_task()
+            random_z = self.agent.sample_skill()
             resampled_zs.append(random_z)
             reward_list.append(self.relabeler.calculate_path_reward(path, random_z))
 
@@ -191,7 +203,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         self.original_rewards.append(original_discounted_reward)
         self.relabeled_rewards.append([self.relabeler.get_discounted_reward(reward) for reward in reward_list[:-1]])
 
-        if self.hide_latent:
+        if self.hide_skill:
             resampled_zs = [np.zeros_like(z) for z in resampled_zs]
         for z, rewards in zip(resampled_zs, reward_list):
             for i, (
@@ -273,14 +285,17 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 reward,
                 next_obs,
                 terminal,
-                agent_info,
+                skills,
+                # agent_info,
         ) in enumerate(zip(
             path["observations"],
             path["actions"],
             rewards,
             path["next_observations"],
             path["terminals"],
-            path["agent_infos"],
+            path["skills"],
+
+            # path["agent_infos"],
             
         )):
             self.add_single_sample(
@@ -290,46 +305,60 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 reward,
                 terminal,
                 next_obs,
+                skills
             )
 
         self.terminate_episode()
 
     def add_paths(self, paths):
+
+
+        """
+            LATENTS NEED TO BE REPLACED WITH SKILLS.
+
+        """
         if self.dads:
             for path in paths:
                 self.add_dads_path(path)
         elif self.normalize_rewards or self.approx_irl:
-            assert not self.hide_latent
+            assert not self.hide_skill
             if self.normalize_rewards:
                 # sample a bunch of latents
                 # calculate the rewards of each trajectory under each latent
                 # take each of them and normalize
                 # label based on the best normalized
-                latents, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
+                skills, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
             elif self.approx_irl:
                 # print(f"KEYS for the path before irl : {paths[0].keys()}")
-                latents, rewards = self.relabeler.approx_irl_relabeling(paths)
+                skills, rewards = self.relabeler.approx_irl_relabeling(paths)
             else:
                 raise RuntimeError
 
-            self.relabeled_latents.extend(latents)
-            orig_latents = [[path['latents'][0]] for path in paths]
-            orig_rewards = [[self.relabeler.calculate_path_reward(path, z[0])] for path, z in zip(paths, orig_latents)]
+            self.relabeled_latents.extend(skills)
+            orig_skills = [[path['skills'][0]] for path in paths]
 
-            assert len(latents) == len(rewards)
-            assert len(orig_latents) == len(orig_rewards)
-            assert len(latents) == len(orig_latents)
+
+            """
+                ARE THE CORRECT SKILLS ARE BEING USED WITH THE COMBINATION OF PATHS TO CALCULATE THE REWARDS?
+
+
+            """
+            orig_rewards = [[self.relabeler.calculate_path_reward(path, z[0])] for path, z in zip(paths, orig_skills)]
+
+            assert len(skills) == len(rewards)
+            assert len(orig_skills) == len(orig_rewards)
+            assert len(skills) == len(orig_skills)
             if self.plot and isinstance(self.relabeler, PointMassBestRandomRelabeler):
-                self.relabeler.plot_paths(paths, orig_latents, latents, title='Epoch {}'.format(str(self.epoch)))
+                self.relabeler.plot_paths(paths, orig_skills, skills, title='Epoch {}'.format(str(self.epoch)))
                 self.trajectory_latents = None
 
-            for i in range(len(latents)):
-                latents[i].extend(orig_latents[i])
+            for i in range(len(skills)):
+                skills[i].extend(orig_skills[i])
                 rewards[i].extend(orig_rewards[i])
 
             # save videos if necessary
             for i, path in enumerate(paths):
-                original_z = path['latents'][0]
+                original_z = path['skills'][0]
                 original_discounted_reward = self.relabeler.get_discounted_reward(rewards[i][-1])
                 if 'rgb_array' in path.keys():
                     save_path = osp.join(logger.get_snapshot_dir(),
@@ -337,18 +366,18 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                     text_original = "{}, {}, {:.2f}".format(str(original_z),
                                                         str(self.relabeler.get_features(path, latent=original_z)),
                                                         original_discounted_reward)
-                    text_relabeled = "{}, {:.2f}".format(str(latents[i][0]),
+                    text_relabeled = "{}, {:.2f}".format(str(skills[i][0]),
                                                         self.relabeler.get_discounted_reward(rewards[i][0]))
                     text = text_original + "; " + text_relabeled
                     save_video(path['rgb_array'], save_path, text)
                 self.original_latents.append(original_z)
-                self.relabeled_latents.append(latents[i][:-1])
+                self.relabeled_latents.append(skills[i][:-1])
                 self.features.append(self.relabeler.get_features(path))
                 self.original_rewards.append(original_discounted_reward)
                 self.relabeled_rewards.append([self.relabeler.get_discounted_reward(reward) for reward in rewards[i][:-1]])
                 self.paths_this_epoch += 1
 
-            for path, reward_list, latent_list in zip(paths, rewards, latents):
+            for path, reward_list, latent_list in zip(paths, rewards, skills):
                 assert len(reward_list) == len(latent_list)
                 for r, z in zip(reward_list, latent_list):
                     self.add_path_fixed_latent(path, r, z)
@@ -362,6 +391,15 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             if self.relabeler.sliding_normalization:
                 self.relabeler.update_sliding_params(paths)
             for path in paths:
+
+                """
+                   SECONDARY LOGIC: self.add_path 
+
+                   FUNCTION. 
+                
+                """
+
+
                 self.add_path(path)
         if self.permute_relabeling:
             self.handle_permuting()
