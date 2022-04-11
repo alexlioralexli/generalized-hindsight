@@ -186,6 +186,9 @@ def diayn_multitask_rollout_with_relabeler(
         """
 
 
+        # print(f"SKILL INSIDE THE ROLLOUT IS : {skill}, obs is : {o}")
+
+
         a = agent.act(o, skill, sample=True)
 
         """
