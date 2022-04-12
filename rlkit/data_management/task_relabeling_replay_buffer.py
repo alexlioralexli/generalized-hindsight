@@ -6,7 +6,7 @@ from rlkit.torch.multitask.pointmass_rewards import PointMassBestRandomRelabeler
 from rlkit.torch.multitask.gym_relabelers import ReacherRelabelerWithGoalAndObs
 from rlkit.util.utils import save_video
 from rlkit.core import logger
-
+import torch
 class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
     def __init__(
             self,
@@ -132,16 +132,28 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
     def add_sample(self, observation, action, reward, terminal, next_observation, **kwargs):
         raise NotImplementedError("Only use add_path")
 
-    def add_single_sample(self, latent, observation, action, reward, terminal, next_observation, skills, **kwargs):
+    def add_single_sample(self, skill, observation, action, reward, terminal, next_observation, **kwargs):
         if isinstance(self._action_space, Discrete):
             action = np.eye(self._action_space.n)[action]
         self._observations[self._top] = observation
         self._actions[self._top] = action
+
+        # For flattening rewards. 
+        # flattened_reward = reward.flatten(reward, start_dim=1)
+        reward = reward.cpu().detach().numpy()
+
+        # print(skill)
+
         self._rewards[self._top] = reward
         self._terminals[self._top] = terminal
-        self._latents[self._top] = latent
+        # print(f"type of skill: {type(skill)}")
+        if (torch.is_tensor(skill)):
+            skill = skill.cpu().detach().numpy()
+
+        # print(f"type of skill array : {type(self._skills)}")
+        self._skills[self._top] = skill
         self._next_obs[self._top] = next_observation
-        self._skills[self._top] = skills
+        #self._skills[self._top] = skills
         self._advance()
 
     def add_single_dads_sample(self, latent, observation, action, terminal, next_observation, qpos, next_qpos):
@@ -278,7 +290,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
 
         self.terminate_episode()
 
-    def add_path_fixed_latent(self, path, rewards, latent):
+    def add_path_fixed_latent(self, path, rewards, skill):
         for i, (
                 obs,
                 action,
@@ -299,13 +311,13 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             
         )):
             self.add_single_sample(
-                latent,
+                skill,
                 obs,
                 action,
                 reward,
                 terminal,
                 next_obs,
-                skills
+                # skills, 
             )
 
         self.terminate_episode()
@@ -377,9 +389,11 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 self.relabeled_rewards.append([self.relabeler.get_discounted_reward(reward) for reward in rewards[i][:-1]])
                 self.paths_this_epoch += 1
 
-            for path, reward_list, latent_list in zip(paths, rewards, skills):
-                assert len(reward_list) == len(latent_list)
-                for r, z in zip(reward_list, latent_list):
+            for path, reward_list, skill_list in zip(paths, rewards, skills):
+                assert len(reward_list) == len(skill_list)
+                for r, z in zip(reward_list, skill_list):
+                    # print(f"Reward is : {r}, its shape is: {r.shape}, its type is: {type(r)}")
+                    
                     self.add_path_fixed_latent(path, r, z)
                 if self.add_random_relabeling:
                     random_z = self.relabeler.sample_task()
@@ -391,6 +405,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             if self.relabeler.sliding_normalization:
                 self.relabeler.update_sliding_params(paths)
             for path in paths:
+
 
                 """
                    SECONDARY LOGIC: self.add_path 
@@ -430,8 +445,8 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 next_observations=self._next_obs[indices],
                 # next_observations=np.concatenate([self._next_obs[indices], self._latents[indices]], axis=1),
                 latents=self._latents[indices],
-                skill = self._skill[indices],
-                not_done = self._not_done[indices],
+                skill = self._skills[indices],
+                not_done = self._not_dones[indices],
                 not_dones_no_max = self._not_dones_no_max[indices]
             )   
 
@@ -601,6 +616,8 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         self._actions[self._top] = action
         self._rewards[self._top] = reward
         self._terminals[self._top] = terminal
+        print(f"type of latent: {type(latent)}")
+        print(f"type of elf._latents array : {type(self._latents)}")
         self._latents[self._top] = latent
         self._next_obs[self._top] = next_observation
         self._advance()
@@ -804,6 +821,8 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             for path, reward_list, latent_list in zip(paths, rewards, latents):
                 assert len(reward_list) == len(latent_list)
                 for r, z in zip(reward_list, latent_list):
+                    #print(f"Reward is : {r}, its shape is: {r.shape}, its type is: {type(r)}")
+
                     self.add_path_fixed_latent(path, r, z)
                 if self.add_random_relabeling:
                     random_z = self.relabeler.sample_task()

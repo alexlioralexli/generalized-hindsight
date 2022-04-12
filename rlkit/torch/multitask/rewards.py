@@ -64,7 +64,7 @@ class DIAYNRelabeler(object):
         # NEED TO CHANGE FOR THE DIVERSITY REWARDS. 
         #assert len(rewards.shape) == 1
 
-        print("ORIGINAL VALUES :")
+        # print("ORIGINAL VALUES :")
         # print(f"rewards are: {rewards}, rewards shape is: {rewards.shape}, shape of len: {len(rewards)}")
         if not (isinstance(rewards, np.ndarray)):
             rewards = rewards.cpu().detach().numpy()
@@ -114,7 +114,7 @@ class DIAYNRelabeler(object):
         """
         device = torch.device("cuda")
 
-        print(f"Skills received is : {skills}, its shape is: {skills.shape}")
+        # print(f"Skills received is : {skills}, its shape is: {skills.shape}")
 
         #CONVERTING SKILLS TO PROPER SHAPE AND TENSOR. 
         skill_array = []
@@ -122,9 +122,9 @@ class DIAYNRelabeler(object):
             skill_array.append(skills[index].tolist())
 
         skill_tensor = torch.DoubleTensor(skill_array).to(device)
-        print(f"Skill tensor is : {skill_tensor}, the shape is : {skill_tensor.shape}")
+        #print(f"Skill tensor is : {skill_tensor}, the shape is : {skill_tensor.shape}")
         obs_tensor = torch.from_numpy(obs).type(torch.DoubleTensor).unsqueeze(0).repeat(len(skills), 1).to(device)
-        print(f"obs_tensor obs_tensor is : {obs_tensor}, the shape is : {obs_tensor.shape}")
+        #print(f"obs_tensor obs_tensor is : {obs_tensor}, the shape is : {obs_tensor.shape}")
 
         action_list = []
         for index in range(len(skills)):
@@ -132,7 +132,7 @@ class DIAYNRelabeler(object):
             action_pyList = action_np.tolist()
             action_list.append(action_pyList)
         action_tensor = torch.DoubleTensor(action_list).to(device)
-        print(f"action_tensor is : {action_tensor}, the shape is : {action_tensor.shape}")
+        #print(f"action_tensor is : {action_tensor}, the shape is : {action_tensor.shape}")
 
 
 
@@ -182,7 +182,7 @@ class DIAYNRelabeler(object):
         obs_action_skill = torch.cat([obs_tensor, action_tensor, skill_tensor], dim=-1).float().to(device)
         # obs_action_skill = obs_action_skill.t()
         
-        print(f"OBSACTIONSKILL INFO is: {obs_action_skill}, its shape is : {obs_action_skill.shape}, its type is: {type(obs_action_skill)}, its dtype is : {obs_action_skill.dtype}")
+        #print(f"OBSACTIONSKILL INFO is: {obs_action_skill}, its shape is : {obs_action_skill.shape}, its type is: {type(obs_action_skill)}, its dtype is : {obs_action_skill.dtype}")
 
 
         # return ptu.get_numpy(self.agent.critic.Q1(obs_action_skill)), ptu.get_numpy(self.agent.critic.Q2(obs_action_skill))
@@ -276,7 +276,7 @@ class DIAYNRandomRelabeler(DIAYNRelabeler):
             skills = [self.agent.skill_dist.sample() for _ in range(self.n_sampled_latents - len(paths))]
 
 
-        print(f"Skills received is :{skills}")
+        # print(f"Skills received is :{skills}")
             #skills = [utils.to_np(self.agent.skill_dist.sample()) for _ in range(self.n_sampled_latents - len(paths))]
         # print(f"SKILLS from sample: {self.agent.skill_dist.sample()}")
         # util_skill = utils.to_np(self.agent.skill_dist.sample())
