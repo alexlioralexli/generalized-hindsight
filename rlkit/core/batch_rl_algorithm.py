@@ -109,7 +109,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
 
 
                 #THE ADD_PATHS, should return the new data points in the replay_buffer, : skills, not_done, not_done_no_max.
-                print(f"new_expl_paths keys are: {new_expl_paths.keys()}")
+                # print(f"new_expl_paths keys are: {new_expl_paths.keys()}")
 
                 self.replay_buffer.add_paths(new_expl_paths)
                 gt.stamp('data storing', unique=False)

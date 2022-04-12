@@ -221,6 +221,8 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
         # for normalizing later
         self.eval_traj_infos = {}
 
+
+
     def collect_new_paths(
             self,
             max_path_length,
@@ -236,6 +238,16 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
         else:
             render = self._render
             render_kwargs = self._render_kwargs
+
+        #print(f"type of num_steps : {type(num_steps)}")
+
+        # if (isinstance(num_steps, str)):
+        #     print(f"Num steps is : {num_steps}")
+        #     num_steps = int(num_steps)
+
+        num_steps = 1000
+        # print(f"Type of num_steps_collected: {type(num_steps_collected)}, num_steps: {type(num_steps)}")
+
         while num_steps_collected < num_steps:
             max_path_length_this_loop = min(  # Do not go over num_steps
                 max_path_length,
@@ -358,6 +370,8 @@ class TaskConditionedPathCollector(PathCollector):
         else:
             render = self._render
             render_kwargs = self._render_kwargs
+
+        print(f"NUM_STEPS IN GHER IS: {num_steps}")
         while num_steps_collected < num_steps:
             max_path_length_this_loop = min(  # Do not go over num_steps
                 max_path_length,
