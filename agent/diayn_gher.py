@@ -374,10 +374,10 @@ class DIAYNGHERAgent(Agent):
         skill = batch['skill']  #256 4 
 
 
-        not_done = batch['not_done']
+        # not_done = batch['not_done']
         not_dones_no_max =  batch['not_dones_no_max']
 
-        diversity_reward = batch['diversity_reward']
+        # diversity_reward = batch['diversity_reward']
 
 
         #3 ARE MISSING:
@@ -410,7 +410,7 @@ class DIAYNGHERAgent(Agent):
 
         logger.log('train/batch_reward', diversity_reward.mean(), step)
 
-        self.update_critic(obs, action, diversity_reward, next_obs, skill, not_done_no_max,
+        self.update_critic(obs, actions, diversity_reward, next_obs, skill, not_dones_no_max,
                            logger, step)
 
         if step % self.actor_update_frequency == 0:
