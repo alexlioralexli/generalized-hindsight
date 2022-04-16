@@ -171,13 +171,13 @@ class DIAYNGHERAgent(Agent):
         # FROM TRAIN.PY in main-diayn 
 
         # self.work_dir = os.getcwd()
-        # print(f'workspace: {self.work_dir}')
+        # # print(f'workspace: {self.work_dir}')
 
-        # #Logger Inputs cleaned
+        # # #Logger Inputs cleaned
         # self.logger = Logger(self.work_dir,
         #                      save_tb=log_save_tb,
         #                      log_frequency=log_frequency,
-        #                      agent=name)
+        #                      agent=name_env)
         
         # FROM THE TRAINER IN sac_gher
 
@@ -189,7 +189,7 @@ class DIAYNGHERAgent(Agent):
         self.qf1, self.qf2 = self.critic.qValueReturn()
         
         self.target_qf1, self.target_qf2 = self.critic_target.qValueReturn()
-
+        self.logger = None
 
         self.trainParamSet()
         self.critic_target.train()
@@ -207,6 +207,8 @@ class DIAYNGHERAgent(Agent):
         self.actor.train(training)
         self.critic.train(training)
     #FROM GHER
+    def setLogger(self, logger):
+        self.logger = logger
     
     def train(self, np_batch, training = True):
        
@@ -372,10 +374,10 @@ class DIAYNGHERAgent(Agent):
         skill = batch['skill']  #256 4 
 
 
-        not_done = batch['not_done']
+        # not_done = batch['not_done']
         not_dones_no_max =  batch['not_dones_no_max']
 
-        diversity_reward = batch['diversity_reward']
+        # diversity_reward = batch['diversity_reward']
 
 
         #3 ARE MISSING:
@@ -408,7 +410,7 @@ class DIAYNGHERAgent(Agent):
 
         logger.log('train/batch_reward', diversity_reward.mean(), step)
 
-        self.update_critic(obs, action, diversity_reward, next_obs, skill, not_done_no_max,
+        self.update_critic(obs, actions, diversity_reward, next_obs, skill, not_dones_no_max,
                            logger, step)
 
         if step % self.actor_update_frequency == 0:
