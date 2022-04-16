@@ -1,4 +1,0 @@
-[2022-04-10 19:03:23,884][hydra.utils][ERROR] - Error instantiating agent.diayn_gher.DIAYNGHERAgent : 
-Found no NVIDIA driver on your system. Please check that you
-have an NVIDIA GPU and installed a driver from
-http://www.nvidia.com/Download/index.aspx
