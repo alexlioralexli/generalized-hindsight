@@ -22,6 +22,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             on_policy=False,
             plot=False,
             dads=False,
+            
             approx_irl=False,
             hide_skill=False,
             permute_relabeling=False,
@@ -172,7 +173,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         return dict(
             observations=self._observations[indices],
             actions=self._actions[indices],
-            latents=self._latents[indices],
+            skill=self._skills[indices],
             rewards=self._rewards[indices],
             terminals=self._terminals[indices],
             next_observations=self._next_obs[indices],
@@ -225,10 +226,6 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                     next_obs,
                     terminal,
                     agent_info,
-                    skills, 
-                    dones,
-                    done_no_max
-                    
             ) in enumerate(zip(
                 path["observations"],
                 path["actions"],
@@ -236,10 +233,6 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 path["next_observations"],
                 path["terminals"],
                 path["agent_infos"],
-                path["skills"],
-                path["dones"],
-                path["done_no_max"]
-
             )):
                 self.add_single_sample(
                     z,
@@ -248,9 +241,6 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                     reward,
                     terminal,
                     next_obs,
-                    skill,
-                    done,
-                    done_no_max
                 )
 
         self.terminate_episode()
@@ -616,8 +606,8 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         self._actions[self._top] = action
         self._rewards[self._top] = reward
         self._terminals[self._top] = terminal
-        print(f"type of latent: {type(latent)}")
-        print(f"type of elf._latents array : {type(self._latents)}")
+        # print(f"type of latent: {type(latent)}")
+        # print(f"type of elf._latents array : {type(self._latents)}")
         self._latents[self._top] = latent
         self._next_obs[self._top] = next_observation
         self._advance()

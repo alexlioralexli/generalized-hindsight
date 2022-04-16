@@ -208,10 +208,10 @@ class DIAYNRandomRelabeler(DIAYNRelabeler):
         if not self.relabel:
             return [], [], []
         if self.n_sampled_latents == 1:
-            latents = [self.sample_task()]
+            latents = [self.agent.skill_dist.sample()]
         else:
-            latents = [self.sample_task() for _ in range(self.n_sampled_latents - 1)]
-            latents.append(path['latents'][0])
+            latents = [self.agent.skill_dist.sample() for _ in range(self.n_sampled_latents - 1)]
+            latents.append(path['skills'][0])
         rewards = [self.calculate_path_reward(path, latent) for latent in latents]
         if self.use_adv:  # calculate advantages
             baselines = self.get_baseline_estimates(path['observations'][0], np.array(latents)).flatten()
