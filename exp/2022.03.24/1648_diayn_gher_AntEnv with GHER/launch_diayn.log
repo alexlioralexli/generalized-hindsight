@@ -1,2 +1,0 @@
-[2022-03-24 16:48:27,558][hydra.utils][ERROR] - Error initializing class /home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/torch/diayn/agent/diayn_gher/DIAYNGHERAgent
-[2022-03-24 16:48:27,558][hydra.utils][ERROR] - Error instantiating /home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/torch/diayn/agent/diayn_gher/DIAYNGHERAgent : Empty module name

@@ -1,2 +1,0 @@
-[2022-03-25 20:02:17,062][hydra.utils][ERROR] - Error instantiating agent.diayn_gher.DIAYNGHERAgent : __init__() missing 3 required positional arguments: 'log_frequency', 'log_save_tb', and 'name_env'
-[2022-03-25 20:02:17,078][hydra.utils][ERROR] - Error instantiating agent.diayn_gher.DIAYNGHERAgent : __init__() missing 3 required positional arguments: 'log_frequency', 'log_save_tb', and 'name_env'
