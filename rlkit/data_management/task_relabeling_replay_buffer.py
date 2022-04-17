@@ -23,7 +23,6 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             plot=False,
             dads=False,
             approx_irl=False,
-            cem=False,
             hide_skill=False,
             cem = False,
             permute_relabeling=False,
@@ -115,7 +114,6 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         self.epoch = 0
         self.paths_this_epoch = 0
 
-        #setup CEM
         self.cem = cem
 
 
@@ -176,7 +174,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         return dict(
             observations=self._observations[indices],
             actions=self._actions[indices],
-            skills=self._skills[indices],
+            latents=self._latents[indices],
             rewards=self._rewards[indices],
             terminals=self._terminals[indices],
             next_observations=self._next_obs[indices],
@@ -233,7 +231,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                     terminal,
                     agent_info,
                     skills, 
-           
+                    dones,
                     done_no_max
                     
             ) in enumerate(zip(
@@ -244,7 +242,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 path["terminals"],
                 path["agent_infos"],
                 path["skills"],
-
+                # path["dones"],
                 path["done_no_max"]
 
             )):
@@ -332,7 +330,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 reward,
                 terminal,
                 next_obs,
-                done_no_max
+                done
                 # skills, 
             )
 
@@ -431,8 +429,9 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 Add modularity later
 
             """
-                if self.cem:
-                    new_path = cem(rho, num_vectors, )
+            if self.cem:
+                pass
+                #new_path = cem(rho, num_vectors, )
                     # self.add_cem_path(new_path)
 
 
@@ -484,7 +483,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 # next_observations=np.concatenate([self._next_obs[indices], self._latents[indices]], axis=1),
                 latents=self._latents[indices],
                 skill = self._skills[indices],
-
+                # not_done = self._not_dones[indices],
                 not_dones_no_max = self._not_dones_no_max[indices]
             )   
 
