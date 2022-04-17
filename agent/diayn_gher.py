@@ -373,8 +373,7 @@ class DIAYNGHERAgent(Agent):
         
         skill = batch['skill']  #256 4 
 
-# '
-#         not_done = batch['not_done']'
+
         not_dones_no_max =  batch['not_dones_no_max']
 
         # diversity_reward = batch['diversity_reward']
