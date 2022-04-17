@@ -56,7 +56,7 @@ Then make the decisions.
 import argparse
 import rlkit.torch.pytorch_util as ptu
 from rlkit.launchers.launcher_util import setup_logger, set_seed, run_experiment
-from rlkit.torch.sac.sac_gher import SACTrainer
+# from rlkit.torch.sac.sac_gher import SACTrainer
 from rlkit.torch.networks import LatentConditionedMlp
 from rlkit.torch.torch_rl_algorithm import TorchDIAYNBatchRLAlgorithm, DIAYNBatchRLAlgorithm
 from rlkit.data_management.task_relabeling_replay_buffer import MultiTaskReplayBuffer, DIAYNTaskReplayBuffer

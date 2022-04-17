@@ -128,7 +128,7 @@ def diayn_multitask_rollout_with_relabeler(
     if latent is None:
         latent = agent.skill_dist.sample()
         if render:
-            # print("Current latent:", latent)
+            print("Current latent:", latent)
     if render and (isinstance(relabeler, ReacherRelabelerWithGoal)
                    or isinstance(relabeler, ReacherRelabelerWithFixedGoal)
                    or isinstance(relabeler, ReacherRelabelerWithGoalSimple)
@@ -344,7 +344,7 @@ def multitask_rollout_with_relabeler(
     if latent is None:
         latent = relabeler.sample_task()
         if render:
-            # print("Current latent:", latent)
+            print("Current latent:", latent)
     if render and (isinstance(relabeler, ReacherRelabelerWithGoal)
                    or isinstance(relabeler, ReacherRelabelerWithFixedGoal)
                    or isinstance(relabeler, ReacherRelabelerWithGoalSimple)

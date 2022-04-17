@@ -1,0 +1,19 @@
+No personal conf_private.py found.
+doodad not detected
+Traceback (most recent call last):
+  File "launch_diayn.py", line 61, in <module>
+    from rlkit.torch.torch_rl_algorithm import TorchDIAYNBatchRLAlgorithm, DIAYNBatchRLAlgorithm
+  File "/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/torch/torch_rl_algorithm.py", line 7, in <module>
+    from rlkit.core.batch_rl_algorithm import BatchRLAlgorithm, DIAYNBatchRLAlgorithm
+  File "/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/core/batch_rl_algorithm.py", line 4, in <module>
+    from rlkit.core.rl_algorithm import BaseRLAlgorithm
+  File "/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/core/rl_algorithm.py", line 8, in <module>
+    from rlkit.samplers.data_collector import DataCollector
+  File "/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/samplers/data_collector/__init__.py", line 6, in <module>
+    from rlkit.samplers.data_collector.path_collector import (
+  File "/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/samplers/data_collector/path_collector.py", line 5, in <module>
+    from rlkit.samplers.rollout_functions import diayn_multitask_rollout_with_relabeler, rollout, multitask_rollout, multitask_rollout_with_relabeler
+  File "/home/yb1025/Research/GRAIL/relabeler-irl/accelerate-skillDiscovery/generalized-hindsight/rlkit/samplers/rollout_functions.py", line 132
+    if render and (isinstance(relabeler, ReacherRelabelerWithGoal)
+    ^
+IndentationError: expected an indented block
