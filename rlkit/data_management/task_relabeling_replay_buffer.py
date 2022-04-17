@@ -22,8 +22,8 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             on_policy=False,
             plot=False,
             dads=False,
-            cem=False,
             approx_irl=False,
+            cem=False,
             hide_skill=False,
             permute_relabeling=False,
             add_random_relabeling=False
@@ -115,6 +115,11 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         self.paths_this_epoch = 0
 
 
+        """
+            Setup CEM
+        """
+        self.cem = cem
+
 
 
         """
@@ -173,7 +178,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         return dict(
             observations=self._observations[indices],
             actions=self._actions[indices],
-            skill=self._skills[indices],
+            skills=self._skills[indices],
             rewards=self._rewards[indices],
             terminals=self._terminals[indices],
             next_observations=self._next_obs[indices],
@@ -226,6 +231,10 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                     next_obs,
                     terminal,
                     agent_info,
+                    skills, 
+           
+                    done_no_max
+                    
             ) in enumerate(zip(
                 path["observations"],
                 path["actions"],
@@ -233,6 +242,9 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 path["next_observations"],
                 path["terminals"],
                 path["agent_infos"],
+                path["skills"],
+                path["done_no_max"]
+
             )):
                 self.add_single_sample(
                     z,
@@ -241,6 +253,9 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                     reward,
                     terminal,
                     next_obs,
+                    skill,
+                    done,
+                    done_no_max
                 )
 
         self.terminate_episode()
@@ -436,7 +451,6 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 # next_observations=np.concatenate([self._next_obs[indices], self._latents[indices]], axis=1),
                 latents=self._latents[indices],
                 skill = self._skills[indices],
-                not_done = self._not_dones[indices],
                 not_dones_no_max = self._not_dones_no_max[indices]
             )   
 
@@ -606,8 +620,8 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         self._actions[self._top] = action
         self._rewards[self._top] = reward
         self._terminals[self._top] = terminal
-        # print(f"type of latent: {type(latent)}")
-        # print(f"type of elf._latents array : {type(self._latents)}")
+        print(f"type of latent: {type(latent)}")
+        print(f"type of elf._latents array : {type(self._latents)}")
         self._latents[self._top] = latent
         self._next_obs[self._top] = next_observation
         self._advance()
