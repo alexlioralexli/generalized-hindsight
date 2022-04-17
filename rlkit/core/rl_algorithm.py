@@ -57,7 +57,13 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
         snapshot = self._get_snapshot()
         logger.save_itr_params(epoch, snapshot)
         gt.stamp('saving')
-        self._log_stats(epoch)
+
+        # LOG STATS. disabled for DIAYN, is DIAYN logging all the relevant stats?
+        # self._log_stats(epoch)
+
+        """
+            ENDING EPOCH FOR THE COLLECTOR, REPLAY_BUFFER.
+        """
 
         self.expl_data_collector.end_epoch(epoch)
         self.eval_data_collector.end_epoch(epoch)
