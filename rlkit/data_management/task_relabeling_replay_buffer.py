@@ -22,7 +22,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             on_policy=False,
             plot=False,
             dads=False,
-            
+            cem=False,
             approx_irl=False,
             hide_skill=False,
             permute_relabeling=False,
