@@ -25,6 +25,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             approx_irl=False,
             cem=False,
             hide_skill=False,
+            cem = False,
             permute_relabeling=False,
             add_random_relabeling=False
     ):
@@ -114,12 +115,8 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         self.epoch = 0
         self.paths_this_epoch = 0
 
-
-        """
-            Setup CEM
-        """
+        #setup CEM
         self.cem = cem
-
 
 
         """
@@ -130,7 +127,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
 
         """
         self._skills = np.zeros((max_replay_buffer_size, skill_dim))
-        self._not_dones = np.zeros((max_replay_buffer_size, 1))
+        # self._not_dones = np.zeros((max_replay_buffer_size, 1))
         self._not_dones_no_max = np.zeros((max_replay_buffer_size, 1))
   
 
@@ -138,7 +135,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
     def add_sample(self, observation, action, reward, terminal, next_observation, **kwargs):
         raise NotImplementedError("Only use add_path")
 
-    def add_single_sample(self, skill, observation, action, reward, terminal, next_observation, **kwargs):
+    def add_single_sample(self, skill, observation, action, reward, terminal, next_observation,done_no_max, **kwargs):
         if isinstance(self._action_space, Discrete):
             action = np.eye(self._action_space.n)[action]
         self._observations[self._top] = observation
@@ -159,6 +156,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         # print(f"type of skill array : {type(self._skills)}")
         self._skills[self._top] = skill
         self._next_obs[self._top] = next_observation
+        self._not_dones_no_max[self._top] = done_no_max
         #self._skills[self._top] = skills
         self._advance()
 
@@ -186,6 +184,9 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
 
     def add_path(self, path):
         # add with original z and resampled z
+
+
+        print(f"Path in single path is: {path}")
 
 
         """
@@ -243,6 +244,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 path["terminals"],
                 path["agent_infos"],
                 path["skills"],
+
                 path["done_no_max"]
 
             )):
@@ -253,8 +255,8 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                     reward,
                     terminal,
                     next_obs,
-                    skill,
-                    done,
+                    # skill,
+                    # done,
                     done_no_max
                 )
 
@@ -295,6 +297,12 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
 
         self.terminate_episode()
 
+
+        # Add paths path are: dict_keys(['observations', 'latents', 'actions', 'next_observations', 'terminals', 'env_infos', 
+        #     'full_observations', 'rewards', 'qpos', 'next_qpos', 'skills', 'done_no_max', 'rgb_array'])
+        #     def add_single_sample(self, skill, observation, action, reward, terminal, next_observation, **kwargs):
+
+
     def add_path_fixed_latent(self, path, rewards, skill):
         for i, (
                 obs,
@@ -303,6 +311,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 next_obs,
                 terminal,
                 skills,
+                done,
                 # agent_info,
         ) in enumerate(zip(
             path["observations"],
@@ -311,6 +320,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             path["next_observations"],
             path["terminals"],
             path["skills"],
+            path["done_no_max"]
 
             # path["agent_infos"],
             
@@ -322,6 +332,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 reward,
                 terminal,
                 next_obs,
+                done_no_max
                 # skills, 
             )
 
@@ -332,8 +343,12 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
 
         """
             LATENTS NEED TO BE REPLACED WITH SKILLS.
+            Add paths path are: dict_keys(['observations', 'latents', 'actions', 'next_observations', 'terminals', 'env_infos', 
+            'full_observations', 'rewards', 'qpos', 'next_qpos', 'skills', 'done_no_max', 'rgb_array'])
 
         """
+
+        # print(f"Add paths path are: {len(paths[0])}")
         if self.dads:
             for path in paths:
                 self.add_dads_path(path)
@@ -394,11 +409,13 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 self.relabeled_rewards.append([self.relabeler.get_discounted_reward(reward) for reward in rewards[i][:-1]])
                 self.paths_this_epoch += 1
 
+            counter = 0
             for path, reward_list, skill_list in zip(paths, rewards, skills):
                 assert len(reward_list) == len(skill_list)
                 for r, z in zip(reward_list, skill_list):
                     # print(f"Reward is : {r}, its shape is: {r.shape}, its type is: {type(r)}")
-                    
+                    # print(f"Path is: {path}, counter is: {counter}")
+                    counter+=1
                     self.add_path_fixed_latent(path, r, z)
                 if self.add_random_relabeling:
                     random_z = self.relabeler.sample_task()
@@ -406,9 +423,23 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                     self.add_path_fixed_latent(path, random_r, random_z)
                 if self.permute_relabeling:
                     self.permutation_list.append((path, z))
+
+
+            """
+                CEM WORK
+
+                Add modularity later
+
+            """
+                if self.cem:
+                    new_path = cem(rho, num_vectors, )
+                    # self.add_cem_path(new_path)
+
+
         else:
             if self.relabeler.sliding_normalization:
                 self.relabeler.update_sliding_params(paths)
+            print(f"The length of path is: {len(paths)}")
             for path in paths:
 
 
@@ -418,6 +449,8 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                    FUNCTION. 
                 
                 """
+                print(f"Add paths path are: {path}")
+
 
 
                 self.add_path(path)
@@ -451,6 +484,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
                 # next_observations=np.concatenate([self._next_obs[indices], self._latents[indices]], axis=1),
                 latents=self._latents[indices],
                 skill = self._skills[indices],
+
                 not_dones_no_max = self._not_dones_no_max[indices]
             )   
 
