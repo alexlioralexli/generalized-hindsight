@@ -132,10 +132,10 @@ class DIAYNAntDirectionRelabelerNewSparse(DIAYNAntDirectionRelabelerNew):
         # speeds = np.linalg.norm(torso_velocities, axis=1, keepdims=True)
         # cosines = (torso_velocities / speeds).dot((np.array([np.cos(theta), np.sin(theta)])).reshape([-1, 1])).flatten()
         # rewards = speeds.flatten() * self.agent.compute_diversity_reward(skill, next_obs) + ctrl_rewards + contact_rewards + 1
-        print(f"Keys are : {path.keys()}")
+        # print(f"Keys are : {path.keys()}")
         # print(f"The next_observations are: {path["next_observations"]}")
         # print(f"The shape of next_observations are: {path["next_observations"].shape}")
-        print(f"The type of path is : {type(path)}")
+        # print(f"The type of path is : {type(path)}")
         # print(f"The skills are: {path["skills"]}")
         # print(f"The shape of skills are: {path["skills"].shape}")
 

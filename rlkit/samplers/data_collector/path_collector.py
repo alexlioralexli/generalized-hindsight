@@ -371,7 +371,7 @@ class TaskConditionedPathCollector(PathCollector):
             render = self._render
             render_kwargs = self._render_kwargs
 
-        print(f"NUM_STEPS IN GHER IS: {num_steps}")
+        # print(f"NUM_STEPS IN GHER IS: {num_steps}")
         while num_steps_collected < num_steps:
             max_path_length_this_loop = min(  # Do not go over num_steps
                 max_path_length,

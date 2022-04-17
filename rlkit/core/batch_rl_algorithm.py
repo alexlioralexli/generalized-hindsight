@@ -76,6 +76,20 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
 
     
     def _train(self):
+
+        """
+            50 EPOCHS
+            NUM TRAIN LOOPS PER EPOCH = 1
+            num trains per loop = 100
+
+            WITHIN COLLECT PATHS
+            num steps collected < num_steps:
+
+                num_steps = 1000
+            WITHIN ROLLOUTS:
+            path_length < max_path_length
+
+        """
         if self.min_num_steps_before_training > 0:
             init_expl_paths = self.expl_data_collector.collect_new_paths(
                 self.max_path_length,
@@ -115,6 +129,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 gt.stamp('data storing', unique=False)
 
                 self.training_mode(True)
+                self.trainer.trainParamSet(True)
                 for _ in range(self.num_trains_per_train_loop):
                     train_data = self.replay_buffer.random_batch(
                         self.batch_size)
@@ -126,6 +141,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 # else:
                 #     self.trainer._update_target_networks()  #added 10/17
                 # print("Reminder: changed the update target networks functionality")
+                self.trainer.trainParamSet(False)
                 gt.stamp('training', unique=False)
                 self.training_mode(False)
 
