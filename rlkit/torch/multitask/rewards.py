@@ -263,6 +263,74 @@ class DIAYNRandomRelabeler(DIAYNRelabeler):
         # histogram of average rewards
         pass
 
+    def dist_values(self, fitness):
+        pass 
+    def calculate_fitness(self, skills, path):
+        pass 
+    def skill_distribution(self, mu, variance):
+        """
+              if self.skill_type == 'discrete':
+            # If the skill type is discrete, the shape of the skill gives us 
+            # the number of different skills
+            self.skill_dist = torch.distributions.OneHotCategorical(
+                probs=torch.ones(self.skill_dim).to(self.device))
+        else:
+            # The skills are a contunious hypercube where every axis is 
+            # between zero and one
+            self.skill_dist = torch.distributions.Uniform(low=torch.zeros(self.skill_dim).to(self.device), 
+                                                          high=torch.ones(self.skill_dim).to(self.device))
+        self.discriminator_update_frequency = discriminator_update_frequency
+
+        """
+
+        pass 
+
+
+    def cem_relabeler(self, paths, rho=0.1, k=5,n=100):
+        """
+            *NOTES:
+
+            Rho -> population percentage
+            n -> sample size
+            k -> iterations
+
+            PSEUDO ALGORITHM :
+            INPUT = paths, rho, n, k
+            mean, variance
+            run for k generations:
+                skills <- generate_skills from mu, rho
+                fitness <- 
+                    use next_obs from ORIGINAL path
+                    USE ORIGINAL ACTION SKILL ALWAYS 
+                    find REWARD with SKILL, OBS, ACTION
+                reduce (from 100 by Rho)
+                Adjust mu, variance from reduce (rho)
+
+            
+            #ADD SINGLE SAMPLE ORIGINAL SKILL AND BEST SKILL FROM original
+            return single path with best skill + ORIGINAL SKILL, (ADD SINGLE PATH) max(from rho)
+
+        """
+        
+        mu = 0
+        variance = 100 # * I Identity Matrix 
+
+        # Random Sampling uses mu and variance
+        """
+            100
+
+        """
+        for _ in range(k):
+            original_skill = path[0]["skill"]
+            new_skills = [self.skill_distribution(mu, variance) for _ in n-1]
+            fitness = calculate_fitness(new_skills, path)
+            mu, variance = dist_values(fitness)
+
+
+            
+
+            pass 
+        pass 
     def approx_irl_relabeling(self, paths):
         device = torch.device("cuda")
         assert self.relabel
@@ -468,13 +536,13 @@ class Relabeler(object):
         return np.minimum(v1, v2)
 
     def get_both_values(self, obs, latents):
-        print(f"Latents is : {type(latents)}, its shape is : {latents.shape}, print for latent : {latents}")
-        print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
+        # print(f"Latents is : {type(latents)}, its shape is : {latents.shape}, print for latent : {latents}")
+        # print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
 
         obs, latent = ptu.from_numpy(obs).unsqueeze(0).repeat(len(latents), 1), ptu.from_numpy(latents)
-        print(f"AFTER RESHAPE")
-        print(f"latent is : {type(latent)}, its shape is : {latent.shape}, print for latent : {latent}")
-        print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
+        # print(f"AFTER RESHAPE")
+        # print(f"latent is : {type(latent)}, its shape is : {latent.shape}, print for latent : {latent}")
+        # print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
 
         actions = self.action_fn(obs, latent, deterministic=True)[0]
         # print(f"Actions from action_fn are as follows: {actions}")

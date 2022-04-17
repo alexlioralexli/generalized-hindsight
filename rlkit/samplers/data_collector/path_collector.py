@@ -253,6 +253,9 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
                 max_path_length,
                 num_steps - num_steps_collected,
             )
+            print(f"Max path length is: {max_path_length}")
+            print(f"Num steps: {num_steps}, difference is: {num_steps - num_steps_collected}")
+            print(f"Max path length with this loop is: {max_path_length_this_loop}")
             path = diayn_multitask_rollout_with_relabeler(
                 self._env,
                 self.agent,
