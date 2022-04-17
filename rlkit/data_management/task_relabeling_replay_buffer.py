@@ -23,6 +23,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
             plot=False,
             dads=False,
             approx_irl=False,
+            cem=False,
             hide_skill=False,
             permute_relabeling=False,
             add_random_relabeling=False
@@ -114,6 +115,11 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         self.paths_this_epoch = 0
 
 
+        """
+            Setup CEM
+        """
+        self.cem = cem
+
 
 
         """
@@ -172,7 +178,7 @@ class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
         return dict(
             observations=self._observations[indices],
             actions=self._actions[indices],
-            latents=self._latents[indices],
+            skills=self._skills[indices],
             rewards=self._rewards[indices],
             terminals=self._terminals[indices],
             next_observations=self._next_obs[indices],
