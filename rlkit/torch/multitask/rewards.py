@@ -263,6 +263,58 @@ class DIAYNRandomRelabeler(DIAYNRelabeler):
         # histogram of average rewards
         pass
 
+    def dist_values(self, fitness):
+        pass 
+    def calculate_fitness(self, skills, path):
+        pass 
+    def skill_distribution(self, mu, variance):
+        """
+              if self.skill_type == 'discrete':
+            # If the skill type is discrete, the shape of the skill gives us 
+            # the number of different skills
+            self.skill_dist = torch.distributions.OneHotCategorical(
+                probs=torch.ones(self.skill_dim).to(self.device))
+        else:
+            # The skills are a contunious hypercube where every axis is 
+            # between zero and one
+            self.skill_dist = torch.distributions.Uniform(low=torch.zeros(self.skill_dim).to(self.device), 
+                                                          high=torch.ones(self.skill_dim).to(self.device))
+        self.discriminator_update_frequency = discriminator_update_frequency
+
+        """
+
+        pass 
+
+
+    def cem_relabeler(self, paths, rho=0.1, k=5,n=100):
+        """
+            *NOTES:
+
+            Rho -> population percentage
+            n -> sample size
+            k -> iterations
+
+        """
+        
+        mu = 0
+        variance = 100 # * I Identity Matrix 
+
+        # Random Sampling uses mu and variance
+        """
+            100
+
+        """
+        for _ in range(k):
+            original_skill = path[0]["skill"]
+            new_skills = [self.skill_distribution(mu, variance) for _ in n-1]
+            fitness = calculate_fitness(new_skills, path)
+            mu, variance = dist_values(fitness)
+
+
+            
+
+            pass 
+        pass 
     def approx_irl_relabeling(self, paths):
         device = torch.device("cuda")
         assert self.relabel

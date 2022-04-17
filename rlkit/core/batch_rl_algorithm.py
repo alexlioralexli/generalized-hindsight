@@ -92,6 +92,11 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 range(self._start_epoch, self.num_epochs),
                 save_itrs=True,
         ):
+
+            """
+                MAX PATH LENGTH IN ALGO KWARGS IS 15.
+
+            """
             self.eval_data_collector.collect_new_paths(
                 self.max_path_length,
                 self.num_eval_steps_per_epoch,
@@ -105,16 +110,29 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                     self.num_expl_steps_per_train_loop,
                     discard_incomplete_paths=False,
                 )
+                print(f"MAX PATH LENGTH IN BATCH RL is : {self.max_path_length}")
                 gt.stamp('exploration sampling', unique=False)
 
 
                 #THE ADD_PATHS, should return the new data points in the replay_buffer, : skills, not_done, not_done_no_max.
                 # print(f"new_expl_paths keys are: {new_expl_paths.keys()}")
+                # print(f"Type of paths after path collector : {new_expl_paths}, length is:  {len(new_expl_paths) if isinstance(new_expl_paths, list) else None}")
+                """
 
+                    *WARNING:
+
+                    MIN NUMBER OF PATHS IS 15, 
+
+                    However, it is coming out to be 1 all the time.
+
+                """
+                
+                
                 self.replay_buffer.add_paths(new_expl_paths)
                 gt.stamp('data storing', unique=False)
 
                 self.training_mode(True)
+                self.trainer.trainParamSet(True)
                 for _ in range(self.num_trains_per_train_loop):
                     train_data = self.replay_buffer.random_batch(
                         self.batch_size)
@@ -128,6 +146,8 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 # print("Reminder: changed the update target networks functionality")
                 gt.stamp('training', unique=False)
                 self.training_mode(False)
+                self.trainer.trainParamSet(True)
+
 
             self._end_epoch(epoch)
 
@@ -189,6 +209,7 @@ class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 discard_incomplete_paths=True,
             )
             gt.stamp('evaluation sampling')
+            print(f"MAX PATH LENGTH IN GHER BATCH RL is : {self.max_path_length}")
 
             for _ in range(self.num_train_loops_per_epoch):
                 new_expl_paths = self.expl_data_collector.collect_new_paths(
