@@ -7,7 +7,7 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gres=gpu:1
-#SBATCH --mem=30G
+#SBATCH --mem=64G
 #SBATCH -c 2
 
 ## TODO: Run your hyperparameter search in a singularity container. Remember to 

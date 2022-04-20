@@ -89,12 +89,16 @@ class DIAYNGHERAgent(Agent):
         self.batch_size = batch_size
         self.learnable_temperature = learnable_temperature
 
-        self.critic = hydra.utils.instantiate(critic_cfg).to(self.device)
-        self.critic_target = hydra.utils.instantiate(critic_cfg).to(
-            self.device)
+        # self.critic = hydra.utils.instantiate(critic_cfg).to(self.device)
+        self.critic = hydra.utils.instantiate(critic_cfg)
+        self.critic_target = hydra.utils.instantiate(critic_cfg)
+        # self.critic_target = hydra.utils.instantiate(critic_cfg).to(
+        #     self.device)
         self.critic_target.load_state_dict(self.critic.state_dict())
 
-        self.actor = hydra.utils.instantiate(actor_cfg).to(self.device)
+        # self.actor = hydra.utils.instantiate(actor_cfg).to(self.device)
+        self.actor = hydra.utils.instantiate(actor_cfg)
+
 
 
         # NEED to make env from sac_her. We don't need it here. Since dimensions are set earlier. 
@@ -102,7 +106,11 @@ class DIAYNGHERAgent(Agent):
 
 
         self.obs_dim_weights = torch.tensor(obs_dim_weights).to(self.device)
-        self.discriminator = hydra.utils.instantiate(discriminator_cfg).to(self.device)
+        # self.obs_dim_weights = torch.tensor(obs_dim_weights)
+
+        # self.discriminator = hydra.utils.instantiate(discriminator_cfg).to(self.device)
+        self.discriminator = hydra.utils.instantiate(discriminator_cfg)
+
         self.skill_dim = skill_dim
         self.skill_type = skill_type
         if self.skill_type == 'discrete':
@@ -110,14 +118,21 @@ class DIAYNGHERAgent(Agent):
             # the number of different skills
             self.skill_dist = torch.distributions.OneHotCategorical(
                 probs=torch.ones(self.skill_dim).to(self.device))
+                # probs=torch.ones(self.skill_dim))
+
         else:
             # The skills are a contunious hypercube where every axis is 
             # between zero and one
             self.skill_dist = torch.distributions.Uniform(low=torch.zeros(self.skill_dim).to(self.device), 
                                                           high=torch.ones(self.skill_dim).to(self.device))
+            # self.skill_dist = torch.distributions.Uniform(low=torch.zeros(self.skill_dim), 
+            #                                               high=torch.ones(self.skill_dim))
+                                                                                                       
         self.discriminator_update_frequency = discriminator_update_frequency
 
         self.log_alpha = torch.tensor(np.log(init_temperature)).to(self.device)
+        # self.log_alpha = torch.tensor(np.log(init_temperature))
+
         self.log_alpha.requires_grad = True
         # set target entropy to -|A|
         self.target_entropy = -action_dim
@@ -222,9 +237,13 @@ class DIAYNGHERAgent(Agent):
 
     def act(self, obs, skill, sample=False):
         obs = torch.FloatTensor(obs).to(self.device)
+        # obs = torch.FloatTensor(obs)
+
         obs = obs.unsqueeze(0)
         if not torch.is_tensor(skill):
             skill = torch.FloatTensor(skill).to(self.device)
+            # skill = torch.FloatTensor(skill)
+
         skill = skill.unsqueeze(0)
         dist = self.actor(obs, skill)
         action = dist.sample() if sample else dist.mean
@@ -433,129 +452,7 @@ class DIAYNGHERAgent(Agent):
 
 
     """
- 
 
-    def train_from_torch(self, batch):
-        rewards = batch['rewards']
-        terminals = batch['terminals']
-        obs = batch['observations']
-        actions = batch['actions']
-        next_obs = batch['next_observations']
-        latents = batch['latents']
-
-        # obs = torch.cat([obs, latents], dim=1)
-        # next_obs = torch.cat([next_obs, latents], dim=1)
-
-        """
-        Policy and Alpha Loss
-        """
-        new_obs_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy(
-            obs, latents, reparameterize=True, return_log_prob=True
-        )
-        if self.use_automatic_entropy_tuning:
-            alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
-            self.alpha_optimizer.zero_grad()
-            alpha_loss.backward()
-            self.alpha_optimizer.step()
-            alpha = self.log_alpha.exp()
-        else:
-            alpha_loss = 0
-            alpha = 1
-
-        q_new_actions = torch.min(
-            self.qf1(obs, new_obs_actions, latents),
-            self.qf2(obs, new_obs_actions, latents),
-        )
-        policy_loss = (alpha * log_pi - q_new_actions).mean()
-
-        """
-        QF Loss
-        """
-        q1_pred = self.qf1(obs, actions, latents)
-        q2_pred = self.qf2(obs, actions, latents)
-        # Make sure policy accounts for squashing functions like tanh correctly!
-        new_next_actions, _, _, new_log_pi, *_ = self.policy(
-            next_obs, latents, reparameterize=True, return_log_prob=True
-        )
-        target_q_values = torch.min(
-            self.target_qf1(next_obs, new_next_actions, latents),
-            self.target_qf2(next_obs, new_next_actions, latents),
-        ) - alpha * new_log_pi
-
-        q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
-        qf1_loss = self.qf_criterion(q1_pred, q_target.detach())
-        qf2_loss = self.qf_criterion(q2_pred, q_target.detach())
-
-        """
-        Update networks
-        """
-        self.policy_optimizer.zero_grad()
-        policy_loss.backward()
-        self.policy_optimizer.step()
-
-        self.qf1_optimizer.zero_grad()
-        qf1_loss.backward()
-        self.qf1_optimizer.step()
-
-        self.qf2_optimizer.zero_grad()
-        qf2_loss.backward()
-        self.qf2_optimizer.step()
-
-        """
-        Soft Updates
-        """
-        if self._n_train_steps_total % self.target_update_period == 0:
-            ptu.soft_update_from_to(
-                self.qf1, self.target_qf1, self.soft_target_tau
-            )
-            ptu.soft_update_from_to(
-                self.qf2, self.target_qf2, self.soft_target_tau
-            )
-
-        """
-        Save some statistics for eval
-        """
-        if self._need_to_update_eval_statistics:
-            self._need_to_update_eval_statistics = False
-            """
-            Eval should set this to None.
-            This way, these statistics are only computed for one batch.
-            """
-            policy_loss = (log_pi - q_new_actions).mean()
-
-            self.eval_statistics['QF1 Loss'] = np.mean(ptu.get_numpy(qf1_loss))
-            self.eval_statistics['QF2 Loss'] = np.mean(ptu.get_numpy(qf2_loss))
-            self.eval_statistics['Policy Loss'] = np.mean(ptu.get_numpy(
-                policy_loss
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Q1 Predictions',
-                ptu.get_numpy(q1_pred),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Q2 Predictions',
-                ptu.get_numpy(q2_pred),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Q Targets',
-                ptu.get_numpy(q_target),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Log Pis',
-                ptu.get_numpy(log_pi),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Policy mu',
-                ptu.get_numpy(policy_mean),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Policy log std',
-                ptu.get_numpy(policy_log_std),
-            ))
-            if self.use_automatic_entropy_tuning:
-                self.eval_statistics['Alpha'] = alpha.item()
-                self.eval_statistics['Alpha Loss'] = alpha_loss.item()
-        self._n_train_steps_total += 1
     
     def get_diagnostics(self):
         return self.eval_statistics
@@ -571,6 +468,7 @@ class DIAYNGHERAgent(Agent):
             self.qf2,
             self.target_qf1,
             self.target_qf2,
+            self.discriminator
         ]
 
     def get_snapshot(self):
@@ -580,6 +478,8 @@ class DIAYNGHERAgent(Agent):
             qf2=self.qf2,
             target_qf1=self.qf1,
             target_qf2=self.qf2,
-        )
+            discriminator=self.discriminator
+
+       )
 
 

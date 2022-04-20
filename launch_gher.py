@@ -35,8 +35,9 @@ from rlkit.envs.wrappers import NormalizedBoxEnv, TimeLimit
 from rlkit.envs.fetch_reach import FetchReachEnv
 from rlkit.envs.updated_ant import AntEnv
 
-NUM_GPUS_AVAILABLE = 4  # change this to the number of gpus on your system
-
+NUM_GPUS_AVAILABLE = 1  # change this to the number of gpus on your system
+import time 
+import torch
 
 def experiment(variant):
     set_seed(int(variant['seed']))
@@ -162,7 +163,10 @@ def experiment(variant):
         replay_buffer=replay_buffer,
         **variant['algo_kwargs']
     )
+    print(f"DEVICE IS: {ptu.device}")
     algorithm.to(ptu.device)
+    print("the number of cpu threads: {}".format(torch.get_num_threads()))
+
     algorithm.train()
 
 if __name__ == "__main__":
@@ -403,5 +407,6 @@ if __name__ == "__main__":
                            region='us-west-1',
                            num_exps_per_instance=1)
         else:
+            print("I AM INSIDE THE CURRENT IF STATEMENT IN LAUNCH GHER")
             setup_logger(exp_dir, variant=variant, seed=variant['seed'], **logger_kwargs)
             experiment(variant)

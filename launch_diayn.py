@@ -24,28 +24,17 @@ Launcher for experiments for Generalized Hindsight Experience Replay
 
 """
 
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import copy
-import math
-import os
-import sys
-import time
-import pickle as pkl
 
-from video import VideoRecorder
+# s# import pickle as pkl
+
+# from video import VideoRecorder
 from logger import Logger
 # import diayn-main.utils as diayn-utility
-
-import dmc2gym
+import os
 import hydra
-from omegaconf import DictConfig, OmegaConf
 # Import the environments
 
 # envs
-import gym
 
 """
 Important files under consideration - Visit each one to find out how it fits into the picture. 
@@ -53,12 +42,13 @@ Important files under consideration - Visit each one to find out how it fits int
 Then make the decisions. 
 
 """
+import torch
 import argparse
 import rlkit.torch.pytorch_util as ptu
 from rlkit.launchers.launcher_util import setup_logger, set_seed, run_experiment
 # from rlkit.torch.sac.sac_gher import SACTrainer
 from rlkit.torch.networks import LatentConditionedMlp
-from rlkit.torch.torch_rl_algorithm import TorchDIAYNBatchRLAlgorithm, DIAYNBatchRLAlgorithm
+from rlkit.torch.torch_rl_algorithm import TorchDIAYNBatchRLAlgorithm
 from rlkit.data_management.task_relabeling_replay_buffer import MultiTaskReplayBuffer, DIAYNTaskReplayBuffer
 from rlkit.samplers.data_collector.path_collector import TaskConditionedPathCollector, DIAYNTaskConditionedPathCollector
 from rlkit.torch.sac.policies import MakeDeterministicLatentPolicy, LatentConditionedTanhGaussianPolicy, \
@@ -102,7 +92,7 @@ from rlkit.envs.wrappers import NormalizedBoxEnv, TimeLimit
 from rlkit.envs.fetch_reach import FetchReachEnv
 from rlkit.envs.updated_ant import AntEnv
 
-NUM_GPUS_AVAILABLE = 4  # change this to the number of gpus on your system
+NUM_GPUS_AVAILABLE = 1 # change this to the number of gpus on your system
 
 
 # NEED TO FIX THE PATH:
@@ -242,9 +232,11 @@ class Workspace(object):
 
 
         qf1, qf2 = agent.critic.qValueReturn()
+        print(f"qf1 is : {qf1}, qf2 is: {qf2}")
 
 
         target_qf1, target_qf2 = agent.critic_target.qValueReturn()
+        print(f"target_qf1 is : {target_qf1}, qf2 is: {target_qf2}")
 
 
         #Network creation -> Can be taken directly from DIAYN. NETWORKs instantiated using train.py
@@ -373,9 +365,9 @@ class Workspace(object):
 
         """
         replay_buffer = DIAYNTaskReplayBuffer(
+            agent=agent,
             env=expl_env,
             relabeler=relabeler,
-            agent=agent,
             #Added from above, for the skill_dim, additional parameter so that the DIAYN algorithm can train.
             skill_dim = self.cfg.agent.params.skill_dim,
             cfg = self.cfg,  
@@ -420,7 +412,7 @@ class Workspace(object):
 
 
         algorithm = TorchDIAYNBatchRLAlgorithm(
-            trainer=agent,
+            agent = agent,
             exploration_env=expl_env,
             evaluation_env=eval_env,
             exploration_data_collector=expl_path_collector,
@@ -429,7 +421,9 @@ class Workspace(object):
             cfg = self.cfg,
             **self.variant['algo_kwargs']
         )
+# /        print(f"DEVICE IS: {ptu.device}")
         algorithm.to(ptu.device)
+        print("the number of cpu threads: {}".format(torch.get_num_threads()))
         algorithm.train()
 
 
@@ -627,6 +621,7 @@ def main(cfg):
         variant['gpu_id'] = i % NUM_GPUS_AVAILABLE
 
     for variant in all_variants:
+        print(f"Len of all variants: {len(all_variants)}")
         if cfg.ec2:
 
             #from rlkit.launchers.launcher_util import setup_logger, set_seed, run_experiment

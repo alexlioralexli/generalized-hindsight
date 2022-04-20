@@ -28,13 +28,16 @@ class TorchBatchRLAlgorithm(BatchRLAlgorithm):
             self.trainer.ws.to(device)
 
 
-
     def training_mode(self, mode):
         for net in self.trainer.networks:
             net.train(mode)
 
 class TorchDIAYNBatchRLAlgorithm(DIAYNBatchRLAlgorithm):
+    """ 
+        The networks are not in the correct device.
+        
 
+    """
     def to(self, device):
         for net in self.trainer.networks:
             net.to(device)

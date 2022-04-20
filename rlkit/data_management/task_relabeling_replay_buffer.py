@@ -1,13 +1,13 @@
 import numpy as np
 import os.path as osp
-from rlkit.data_management.simple_replay_buffer import SimpleReplayBuffer, DIAYNSimpleReplayBuffer
+from rlkit.data_management.simple_replay_buffer import SimpleReplayBuffer
 from gym.spaces import Box, Discrete, Tuple, MultiBinary
 from rlkit.torch.multitask.pointmass_rewards import PointMassBestRandomRelabeler
 from rlkit.torch.multitask.gym_relabelers import ReacherRelabelerWithGoalAndObs
 from rlkit.util.utils import save_video
 from rlkit.core import logger
 import torch
-class DIAYNTaskReplayBuffer(DIAYNSimpleReplayBuffer):
+class DIAYNTaskReplayBuffer(SimpleReplayBuffer):
     def __init__(
             self,
             agent,
@@ -653,8 +653,8 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         self._actions[self._top] = action
         self._rewards[self._top] = reward
         self._terminals[self._top] = terminal
-        print(f"type of latent: {type(latent)}")
-        print(f"type of elf._latents array : {type(self._latents)}")
+        # print(f"type of latent: {type(latent)}")
+        # print(f"type of elf._latents array : {type(self._latents)}")
         self._latents[self._top] = latent
         self._next_obs[self._top] = next_observation
         self._advance()
