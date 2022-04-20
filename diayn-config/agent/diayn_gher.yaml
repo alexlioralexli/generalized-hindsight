@@ -31,7 +31,7 @@ agent:
     log_frequency: 10000
     log_save_tb: true
     name_env : AntEnv
-    max_replay_buffer_size: 1e6
+    max_replay_buffer_size: 5e6
     plotter: None
     render_eval_paths: false
     use_automatic_entropy_tuning: true 

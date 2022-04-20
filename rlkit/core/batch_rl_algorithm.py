@@ -2,19 +2,19 @@ import abc
 
 import gtimer as gt
 from rlkit.core.rl_algorithm import BaseRLAlgorithm
-from rlkit.data_management.replay_buffer import ReplayBuffer, DIAYNReplayBuffer
+from rlkit.data_management.replay_buffer import ReplayBuffer
 from rlkit.samplers.data_collector import PathCollector
 
 class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
     def __init__(
             self,
-            trainer,
+            agent,
             exploration_env,
             evaluation_env,
             cfg, 
             exploration_data_collector: PathCollector,
             evaluation_data_collector: PathCollector,
-            replay_buffer: DIAYNReplayBuffer,
+            replay_buffer: ReplayBuffer,
             batch_size,
             max_path_length,
             num_epochs,
@@ -106,6 +106,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 range(self._start_epoch, self.num_epochs),
                 save_itrs=True,
         ):
+            print(f"NUM EPOCHS IS: {self.num_epochs}")
 
             """
                 MAX PATH LENGTH IN ALGO KWARGS IS 15.
@@ -145,7 +146,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 self.replay_buffer.add_paths(new_expl_paths)
                 gt.stamp('data storing', unique=False)
 
-                self.training_mode(True)
+                # self.training_mode(True)
                 self.trainer.trainParamSet(True)
                 for _ in range(self.num_trains_per_train_loop):
                     train_data = self.replay_buffer.random_batch(
@@ -160,8 +161,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 # print("Reminder: changed the update target networks functionality")
                 self.trainer.trainParamSet(False)
                 gt.stamp('training', unique=False)
-                self.training_mode(False)
-                self.trainer.trainParamSet(True)
+                # self.training_mode(False)
 
 
             self._end_epoch(epoch)
@@ -238,6 +238,7 @@ class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 gt.stamp('data storing', unique=False)
 
                 self.training_mode(True)
+                # self.trainer.trainParamSet()
                 for _ in range(self.num_trains_per_train_loop):
                     train_data = self.replay_buffer.random_batch(
                         self.batch_size)
@@ -250,6 +251,8 @@ class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 #     self.trainer._update_target_networks()  #added 10/17
                 # print("Reminder: changed the update target networks functionality")
                 gt.stamp('training', unique=False)
+                # self.trainer.trainParamSet(False)
+
                 self.training_mode(False)
 
             self._end_epoch(epoch)
