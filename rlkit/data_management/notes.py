@@ -1,75 +1,83 @@
-import numpy as np
-import os.path as osp
-from rlkit.data_management.simple_replay_buffer import SimpleReplayBuffer
-from gym.spaces import Box, Discrete, Tuple, MultiBinary
-from rlkit.torch.multitask.pointmass_rewards import PointMassBestRandomRelabeler
-from rlkit.torch.multitask.gym_relabelers import ReacherRelabelerWithGoalAndObs
-from rlkit.util.utils import save_video
-from rlkit.core import logger
-import torch
+"""
+
+if self.alg == "SAC":
+            
+            elif self.alg == "DIAYN":
+
+"""
 
 
-class MultiTaskReplayBuffer(SimpleReplayBuffer):
+
+
+
+class DIAYNTaskReplayBuffer(SimpleReplayBuffer):
     def __init__(
             self,
+            agent,
             max_replay_buffer_size,
             env,
+            skill_dim, 
+            cfg, 
             relabeler,
-            alg="SAC",
-            cfg=None,
-            skill_dim=False,
-            latent_dim=None,
+            latent_dim,
             normalize_rewards=False,
             grid_normalize=False,
             on_policy=False,
             plot=False,
             dads=False,
             approx_irl=False,
-            hide_latent=False,
+            hide_skill=False,
+            cem = False,
             permute_relabeling=False,
-            add_random_relabeling=False,
-            cem=False,
-            agent=None,
-
+            add_random_relabeling=False
     ):
-        self.alg = alg
-        if self.alg == "DIAYN":
-            max_replay_buffer_size = cfg.max_replay_buffer_size
-            self._skills = np.zeros((max_replay_buffer_size, skill_dim))
-        # self._not_dones = np.zeros((max_replay_buffer_size, 1))
-            self._not_dones_no_max = np.zeros((max_replay_buffer_size, 1))
-  
-        
-        # print(f"Algorithm received is: {self.alg}")
         """
         :param max_replay_buffer_size:
         """
         self.env = env
         self._action_space = env.action_space
         self._observation_space = env.observation_space
-        if isinstance(self.env.action_space, Discrete):
-            action_dim = env.action_space.n
-        else:
-            action_dim = env.action_space.low.size
+        self.agent = agent
 
+
+        # MIGHT NEED TO CHANGE THIS FOR THE RLKIT
         if isinstance(self.env.observation_space, Discrete) or isinstance(self.env.observation_space, MultiBinary):
             obs_dim = env.observation_space.n
+            action_dim = env.action_space.n
+
         else:
             obs_dim = env.observation_space.low.size
+            action_dim = env.action_space.low.size
+
 
         self.latent_dim = latent_dim
+
+        print(f"Type of latent dim: {type(latent_dim)}")
+        print(latent_dim)
+  
+        # max_replay_buffer_size = 1e6
+
+        """
+            MAX REPLAY BUFFER IS SET HERE:
+
+        """
+        max_replay_buffer_size = cfg.max_replay_buffer_size
+        print(f"Type of max replay : {type(max_replay_buffer_size)}")
+        print(max_replay_buffer_size)
+
         self._latents = np.zeros((max_replay_buffer_size, latent_dim))
         self.relabeler = relabeler
 
         self._observation_dim = obs_dim
         self._action_dim = action_dim
-        
         self._max_replay_buffer_size = max_replay_buffer_size
         self._observations = np.zeros((max_replay_buffer_size, obs_dim))
         # It's a bit memory inefficient to save the observations twice,
         # but it makes the code *much* easier since you no longer have to
         # worry about termination conditions.
         self._next_obs = np.zeros((max_replay_buffer_size, obs_dim))
+        
+        #self._skills = np.zeros((max_replay_buffer_size, 4))
         self._actions = np.zeros((max_replay_buffer_size, action_dim))
         # Make everything a 2D np array to make it easier for other code to
         # reason about the shape of the data
@@ -79,10 +87,11 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         # Define self._env_infos[key][i] to be the return value of env_info[key]
         # at time i
         self.normalize_rewards = normalize_rewards
+     
         self.grid_normalize = grid_normalize
         self.on_policy = on_policy
         self.dads = dads
-        self.hide_latent = hide_latent
+        self.hide_skill = hide_skill
         self.permute_relabeling = permute_relabeling
         self.add_random_relabeling = add_random_relabeling
         self.permutation_list = []
@@ -93,7 +102,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         if plot:
             self.trajectory_latents = []
         self.approx_irl = approx_irl
-        self.cem = cem
+
         self._top = 0
         self._size = 0
         self.all_relabeling_info = dict()
@@ -108,32 +117,49 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         self.epoch = 0
         self.paths_this_epoch = 0
 
+        self.cem = cem
+
+
+        """
+            FOR THE DIAYN RELABELER. 
+
+            1. 
+
+
+        """
+        self._skills = np.zeros((max_replay_buffer_size, skill_dim))
+        # self._not_dones = np.zeros((max_replay_buffer_size, 1))
+        self._not_dones_no_max = np.zeros((max_replay_buffer_size, 1))
+  
+
 
     def add_sample(self, observation, action, reward, terminal, next_observation, **kwargs):
         raise NotImplementedError("Only use add_path")
 
-    def add_single_sample(self, latent, observation, action, reward, terminal, next_observation, skill=None, **kwargs):
+    def add_single_sample(self, skill, observation, action, reward, terminal, next_observation,done_no_max, **kwargs):
         if isinstance(self._action_space, Discrete):
             action = np.eye(self._action_space.n)[action]
-        if self.alg == "DIAYN":
-            if (torch.is_tensor(latent)):
-                latent = latent.cpu().detach().numpy()
-            reward = reward.cpu().detach().numpy()
-            # print(f"Latent received is : {latent}, the type is : {type(latent)}")
-            
-            self._skills[self._top] = latent
-        self._terminals[self._top] = terminal
         self._observations[self._top] = observation
         self._actions[self._top] = action
+
+        # For flattening rewards. 
+        # flattened_reward = reward.flatten(reward, start_dim=1)
+        reward = reward.cpu().detach().numpy()
+
+        # print(skill)
+
         self._rewards[self._top] = reward
-        if self.alg == "SAC":
-            self._latents[self._top] = latent
-        
+        self._terminals[self._top] = terminal
+        # print(f"type of skill: {type(skill)}")
+        if (torch.is_tensor(skill)):
+            skill = skill.cpu().detach().numpy()
+
+        # print(f"type of skill array : {type(self._skills)}")
+       
         self._next_obs[self._top] = next_observation
+        self._not_dones_no_max[self._top] = done_no_max
+        #self._skills[self._top] = skills
         self._advance()
-
-    
-
 
     def add_single_dads_sample(self, latent, observation, action, terminal, next_observation, qpos, next_qpos):
         if isinstance(self._action_space, Discrete):
@@ -148,38 +174,36 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         self._advance()
 
     def sample_data(self, indices):
-        if self.alg ==  "SAC":
-            return dict(
-                observations=self._observations[indices],
-                actions=self._actions[indices],
-                latents=self._latents[indices],
-                rewards=self._rewards[indices],
-                terminals=self._terminals[indices],
-                next_observations=self._next_obs[indices],
-            )
-        elif self.alg == "DIAYN":
-            return dict(
-                skills = self._skills[indices],
-                not_dones_no_max = self._not_dones_no_max[indices],
-                observations=self._observations[indices],
-                actions=self._actions[indices],
-                latents=self._latents[indices],
-                rewards=self._rewards[indices],
-                terminals=self._terminals[indices],
-                next_observations=self._next_obs[indices],
-            )
+        return dict(
+            observations=self._observations[indices],
+            actions=self._actions[indices],
+            latents=self._latents[indices],
+            rewards=self._rewards[indices],
+            terminals=self._terminals[indices],
+            next_observations=self._next_obs[indices],
+        )
 
     def add_path(self, path):
         # add with original z and resampled z
-        original_z = path["latents"][0]
-        resampled_zs, reward_list, ranked_latents = self.relabeler.get_latents_and_rewards(path)
+
+
+        print(f"Path in single path is: {path}")
+
+
+        """
+
+            ORIGINAL -> z, how do we replace it with the skill vector
+
+        """
+        original_z = path["skills"][0]
+        resampled_zs, reward_list, ranked_latents = self.relabeler.get_skills_and_rewards(path)
         if self.permute_relabeling:
             self.permutation_list.append((path, resampled_zs[0]))
         if not any([np.array_equal(original_z, z) for z in resampled_zs]):
             resampled_zs.append(original_z)
             reward_list.append(self.relabeler.calculate_path_reward(path, original_z))
         if self.add_random_relabeling:
-            random_z = self.relabeler.sample_task()
+            random_z = self.agent.sample_skill()
             resampled_zs.append(random_z)
             reward_list.append(self.relabeler.calculate_path_reward(path, random_z))
 
@@ -199,7 +223,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         self.original_rewards.append(original_discounted_reward)
         self.relabeled_rewards.append([self.relabeler.get_discounted_reward(reward) for reward in reward_list[:-1]])
 
-        if self.hide_latent:
+        if self.hide_skill:
             resampled_zs = [np.zeros_like(z) for z in resampled_zs]
         for z, rewards in zip(resampled_zs, reward_list):
             for i, (
@@ -209,6 +233,10 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                     next_obs,
                     terminal,
                     agent_info,
+                    skills, 
+                    dones,
+                    done_no_max
+                    
             ) in enumerate(zip(
                 path["observations"],
                 path["actions"],
@@ -216,6 +244,10 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                 path["next_observations"],
                 path["terminals"],
                 path["agent_infos"],
+                path["skills"],
+                # path["dones"],
+                path["done_no_max"]
+
             )):
                 self.add_single_sample(
                     z,
@@ -224,6 +256,9 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                     reward,
                     terminal,
                     next_obs,
+                    # skill,
+                    # done,
+                    done_no_max
                 )
 
         self.terminate_episode()
@@ -263,128 +298,112 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
 
         self.terminate_episode()
 
-    def add_path_fixed_latent(self, path, rewards, latent, skill=None):
-        if self.alg == "SAC":
-        
-            for i, (
-                    obs,
-                    action,
-                    reward,
-                    next_obs,
-                    terminal,
-                    agent_info,
-            ) in enumerate(zip(
-                path["observations"],
-                path["actions"],
-                rewards,
-                path["next_observations"],
-                path["terminals"],
-                path["agent_infos"],
-            )):
-                self.add_single_sample(
-                    latent,
-                    obs,
-                    action,
-                    reward,
-                    terminal,
-                    next_obs,
-                )
-        elif self.alg == "DIAYN":
-              for i, (
+
+        # Add paths path are: dict_keys(['observations', 'latents', 'actions', 'next_observations', 'terminals', 'env_infos', 
+        #     'full_observations', 'rewards', 'qpos', 'next_qpos', 'skills', 'done_no_max', 'rgb_array'])
+        #     def add_single_sample(self, skill, observation, action, reward, terminal, next_observation, **kwargs):
+
+
+    def add_path_fixed_latent(self, path, rewards, skill):
+
+        """
+            VALUE STUDY, 
+
+            HOW DOES THE REPLACED PATH LOOK, RIGHT NOW, THE SAME SKILL IS ADDED TO THE PATH IN A ROLLOUT
+            WHEN YOU REPLACE THE PATH, SKILL WITH THE NEW SKILL, ARE ALL THE SKILLS UPDATED?
+
+            
+
+
+
+        """
+        for i, (
                 obs,
                 action,
                 reward,
                 next_obs,
                 terminal,
-                # skills,
+                skills,
                 done,
                 # agent_info,
-            ) in enumerate(zip(
-                path["observations"],
-                path["actions"],
-                rewards,
-                path["next_observations"],
-                path["terminals"],
-                # path["skills"],
-                path["done_no_max"]
+        ) in enumerate(zip(
+            path["observations"],
+            path["actions"],
+            rewards,
+            path["next_observations"],
+            path["terminals"],
+            path["skills"],
+            path["done_no_max"]
 
-                # path["agent_infos"],
-                
-            )):
-                self.add_single_sample(
-                    latent,
-                    obs,
-                    action,
-                    reward,
-                    terminal,
-                    next_obs,
-                    done
-                    # skills, 
-                )
+            # path["agent_infos"],
+            
+        )):
+            self.add_single_sample(
+                skill,
+                obs,
+                action,
+                reward,
+                terminal,
+                next_obs,
+                done
+                # skills, 
+            )
 
         self.terminate_episode()
 
     def add_paths(self, paths):
+
+
+        """
+            LATENTS NEED TO BE REPLACED WITH SKILLS.
+            Add paths path are: dict_keys(['observations', 'latents', 'actions', 'next_observations', 'terminals', 'env_infos', 
+            'full_observations', 'rewards', 'qpos', 'next_qpos', 'skills', 'done_no_max', 'rgb_array'])
+
+        """
+
+        # print(f"Add paths path are: {len(paths[0])}")
         if self.dads:
             for path in paths:
                 self.add_dads_path(path)
         elif self.normalize_rewards or self.approx_irl:
-            assert not self.hide_latent
+            assert not self.hide_skill
             if self.normalize_rewards:
                 # sample a bunch of latents
                 # calculate the rewards of each trajectory under each latent
                 # take each of them and normalize
                 # label based on the best normalized
-                if self.alg == "SAC":
-                    latents, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
-                elif self.alg == "DIAYN":
-                    skills, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
-
+                skills, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
             elif self.approx_irl:
-                if self.alg == "SAC":
-                    latents, rewards = self.relabeler.approx_irl_relabeling(paths)
-                elif self.alg == "DIAYN":
-                    skills, rewards = self.relabeler.approx_irl_relabeling(paths)
-
+                # print(f"KEYS for the path before irl : {paths[0].keys()}")
+                skills, rewards = self.relabeler.approx_irl_relabeling(paths)
             else:
                 raise RuntimeError
 
-            if self.alg == "SAC":
-                self.relabeled_latents.extend(latents)
-                orig_latents = [[path['latents'][0]] for path in paths]
-                orig_rewards = [[self.relabeler.calculate_path_reward(path, z[0])] for path, z in zip(paths, orig_latents)]
-                assert len(latents) == len(rewards)
-                assert len(orig_latents) == len(orig_rewards)
-                assert len(latents) == len(orig_latents)
-                for i in range(len(latents)):
-                    latents[i].extend(orig_latents[i])
-                    rewards[i].extend(orig_rewards[i])
-            elif self.alg == "DIAYN":
-                self.relabeled_latents.extend(skills)
-                orig_skills = [[path['skills'][0]] for path in paths]
-                orig_rewards = [[self.relabeler.calculate_path_reward(path, z[0], True)] for path, z in zip(paths, orig_skills)]
-                assert len(skills) == len(rewards)
-                assert len(orig_skills) == len(orig_rewards)
-                assert len(skills) == len(orig_skills)
-                for i in range(len(skills)):
-                    skills[i].extend(orig_skills[i])
-                    rewards[i].extend(orig_rewards[i])
+            self.relabeled_latents.extend(skills)
+            orig_skills = [[path['skills'][0]] for path in paths]
 
 
+            """
+                ARE THE CORRECT SKILLS ARE BEING USED WITH THE COMBINATION OF PATHS TO CALCULATE THE REWARDS?
+
+
+            """
+            orig_rewards = [[self.relabeler.calculate_path_reward(path, z[0], True)] for path, z in zip(paths, orig_skills)]
+
+            assert len(skills) == len(rewards)
+            assert len(orig_skills) == len(orig_rewards)
+            assert len(skills) == len(orig_skills)
             if self.plot and isinstance(self.relabeler, PointMassBestRandomRelabeler):
-                self.relabeler.plot_paths(paths, orig_latents, latents, title='Epoch {}'.format(str(self.epoch)))
+                self.relabeler.plot_paths(paths, orig_skills, skills, title='Epoch {}'.format(str(self.epoch)))
                 self.trajectory_latents = None
 
-
-            
+            for i in range(len(skills)):
+                skills[i].extend(orig_skills[i])
+                rewards[i].extend(orig_rewards[i])
 
             # save videos if necessary
             for i, path in enumerate(paths):
-                if self.alg == "SAC":
-                    original_z = path['latents'][0]
-                elif self.alg == "DIAYN":
-                    original_z = path['skills'][0]
-
+                original_z = path['skills'][0]
                 original_discounted_reward = self.relabeler.get_discounted_reward(rewards[i][-1])
                 if 'rgb_array' in path.keys():
                     save_path = osp.join(logger.get_snapshot_dir(),
@@ -392,66 +411,75 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                     text_original = "{}, {}, {:.2f}".format(str(original_z),
                                                         str(self.relabeler.get_features(path, latent=original_z)),
                                                         original_discounted_reward)
-                    text_relabeled = "{}, {:.2f}".format(str(latents[i][0]),
+                    text_relabeled = "{}, {:.2f}".format(str(skills[i][0]),
                                                         self.relabeler.get_discounted_reward(rewards[i][0]))
                     text = text_original + "; " + text_relabeled
                     save_video(path['rgb_array'], save_path, text)
-                
                 self.original_latents.append(original_z)
-                
-
-                if self.alg == "SAC":
-                    self.relabeled_latents.append(latents[i][:-1])
-                elif self.alg == "DIAYN":
-                    self.relabeled_latents.append(skills[i][:-1])
-
-                
+                self.relabeled_latents.append(skills[i][:-1])
                 self.features.append(self.relabeler.get_features(path))
                 self.original_rewards.append(original_discounted_reward)
                 self.relabeled_rewards.append([self.relabeler.get_discounted_reward(reward) for reward in rewards[i][:-1]])
                 self.paths_this_epoch += 1
-            
-            if self.alg == "SAC":
-                for path, reward_list, latent_list in zip(paths, rewards, latents):
-                    assert len(reward_list) == len(latent_list)
-                    for r, z in zip(reward_list, latent_list):
-                        #print(f"Reward is : {r}, its shape is: {r.shape}, its type is: {type(r)}")
 
-                        self.add_path_fixed_latent(path, r, z)
-                    if self.add_random_relabeling:
-                        random_z = self.relabeler.sample_task()
-                        random_r = self.relabeler.calculate_path_reward(path, random_z)
-                        self.add_path_fixed_latent(path, random_r, random_z)
-                    if self.permute_relabeling:
-                        self.permutation_list.append((path, z))
-            elif self.alg == "DIAYN":
-                for path, reward_list, skill_list in zip(paths, rewards, skills):
-                    assert len(reward_list) == len(skill_list)
-                    for r, z in zip(reward_list, skill_list):
-                        # print(f"Reward is : {r}, its shape is: {r.shape}, its type is: {type(r)}")
-                        # print(f"Path is: {path}, counter is: {counter}")
-                        self.add_path_fixed_latent(path, r, z)
-                    if self.add_random_relabeling:
+            counter = 0
+            for path, reward_list, skill_list in zip(paths, rewards, skills):
+                assert len(reward_list) == len(skill_list)
+                for r, z in zip(reward_list, skill_list):
+                    # print(f"Reward is : {r}, its shape is: {r.shape}, its type is: {type(r)}")
+                    # print(f"Path is: {path}, counter is: {counter}")
+                    counter+=1
+                    self.add_path_fixed_latent(path, r, z)
+                if self.add_random_relabeling:
 
-                        """
-                            HOW DO WE SAMPLE THIS TASK? in random relabeling from the distribution?
+                    """
+                        HOW DO WE SAMPLE THIS TASK? in random relabeling from the distribution?
 
-                            FROM THE ORIGINAL DIAYN SAMPLE TASK OR THE ONE IN THE CLASS FOR GHER.
-                        """
+                        FROM THE ORIGINAL DIAYN SAMPLE TASK OR THE ONE IN THE CLASS FOR GHER.
+                    """
 
-                        random_z = self.relabeler.sample_task()
-                        random_r = self.relabeler.calculate_path_reward(path, random_z, True)
-                        self.add_path_fixed_latent(path, random_r, random_z)
-                    if self.permute_relabeling:
-                        self.permutation_list.append((path,z))
+                    random_z = self.relabeler.sample_task()
+                    random_r = self.relabeler.calculate_path_reward(path, random_z, True)
+                    self.add_path_fixed_latent(path, random_r, random_z)
+                if self.permute_relabeling:
+                    self.permutation_list.append((path, z))
+
+
+            """
+                CEM WORK
+
+                Add modularity later
+
+            """
+            if self.cem:
+                pass
+                #new_path = cem(rho, num_vectors, )
+                    # self.add_cem_path(new_path)
+
+
         else:
             if self.relabeler.sliding_normalization:
                 self.relabeler.update_sliding_params(paths)
+            print(f"The length of path is: {len(paths)}")
             for path in paths:
+
+
+                """
+                   SECONDARY LOGIC: self.add_path 
+
+                   FUNCTION. 
+                
+                """
+                print(f"Add paths path are: {path}")
+
+
+
                 self.add_path(path)
         if self.permute_relabeling:
             self.handle_permuting()
 
+
+        
 
     def random_batch(self, batch_size):
         indices = np.random.randint(0, self._size, batch_size)
@@ -464,21 +492,10 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                 latents=self._latents[indices],
                 qpos=self._qpos[indices],
                 next_qpos=self._next_qpos[indices],
+                
             )
         else:
-            if self.alg == "SAC":
-                return dict(
-                    # observations=np.concatenate([self._observations[indices], self._latents[indices]], axis=1),
-                    observations=self._observations[indices],
-                    actions=self._actions[indices],
-                    rewards=self._rewards[indices],
-                    terminals=self._terminals[indices],
-                    next_observations=self._next_obs[indices],
-                    # next_observations=np.concatenate([self._next_obs[indices], self._latents[indices]], axis=1),
-                    latents=self._latents[indices],
-                )
-            elif self.alg == "DIAYN":
-                return dict(
+            return dict(
                 # observations=np.concatenate([self._observations[indices], self._latents[indices]], axis=1),
                 observations=self._observations[indices],
                 actions=self._actions[indices],
@@ -490,8 +507,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                 skill = self._skills[indices],
                 # not_done = self._not_dones[indices],
                 not_dones_no_max = self._not_dones_no_max[indices]
-                )   
-
+            )   
 
     def handle_permuting(self):
         latents = [pair[1] for pair in self.permutation_list]

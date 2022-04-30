@@ -124,6 +124,8 @@ class GoalConditionedPathCollector(PathCollector):
         paths = []
         num_steps_collected = 0
         while num_steps_collected < num_steps:
+
+            print(f"MAX PATH LENGTH FOR THIS LOOP IS: {max_path_length}")
             max_path_length_this_loop = min(  # Do not go over num_steps
                 max_path_length,
                 num_steps - num_steps_collected,

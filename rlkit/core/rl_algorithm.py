@@ -6,7 +6,7 @@ import gtimer as gt
 from rlkit.core import logger, eval_util
 from rlkit.data_management.replay_buffer import ReplayBuffer
 from rlkit.samplers.data_collector import DataCollector
-
+import torch
 
 def _get_epoch_timings():
     times_itrs = gt.get_times().stamps.itrs
@@ -55,6 +55,9 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
 
     def _end_epoch(self, epoch):
         snapshot = self._get_snapshot()
+        # print(f"SNAPSHOT IS In: {snapshot.to(torch.device("cuda"))}")
+
+        #SNAPSHOT DIC
         logger.save_itr_params(epoch, snapshot)
         gt.stamp('saving')
 
@@ -75,14 +78,19 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
 
     def _get_snapshot(self):
         snapshot = {}
+        print(f"I AM INSIDE SNAPSHOT")
+        """
+
+        """
         for k, v in self.trainer.get_snapshot().items():
             snapshot['trainer/' + k] = v
         for k, v in self.expl_data_collector.get_snapshot().items():
             snapshot['exploration/' + k] = v
         for k, v in self.eval_data_collector.get_snapshot().items():
             snapshot['evaluation/' + k] = v
-        for k, v in self.replay_buffer.get_snapshot().items():
-            snapshot['replay_buffer/' + k] = v
+        # for k, v in self.replay_buffer.get_snapshot().items():
+        #     snapshot['replay_buffer/' + k] = v
+        
         return snapshot
 
     def _log_stats(self, epoch):

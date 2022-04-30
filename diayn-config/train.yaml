@@ -42,29 +42,31 @@ n_to_take: 1
 relabel: true
 use_advantages: true
 irl: true
-plot: true
+plot: false
 cache : true
 sparse: None
 ngradsteps: 100
-nexpl: None
+nexpl: 1000
 horizon: None
 tau: 5e-3
-lr: None
-buffer_size: None
-discount : None
+lr: 0.003
+qf_lr : 0.003
+buffer_size: 5e6
+discount : 0.99
 gpu : 0
 ec2: false
 local_docker: false
 reward_scale : Null 
-insert_time: true
+insert_time: false
 latent_shape_multiplier : 1
-latent_to_all_layers: true
+latent_to_all_layers: false
 n_experiments: -1 
-exp_name: None
-extra: None
-test: true
-epochs: 100
-save_videos: true
+# IN exp name add date as well. 
+exp_name: DIAYN-GHER-ANTENV
+extra: SEED_1
+test: false
+epochs: 2
+save_videos: false
 safetyfn: newlog
 energyfn: velocity
 energyfactor: 1.0

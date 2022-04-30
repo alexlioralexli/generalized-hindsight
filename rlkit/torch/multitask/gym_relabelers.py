@@ -1,6 +1,6 @@
 import numpy as np
 from gym import spaces
-from rlkit.torch.multitask.rewards import Relabeler, RandomRelabeler, DIAYNRelabeler, DIAYNRandomRelabeler
+from rlkit.torch.multitask.rewards import Relabeler, RandomRelabeler
 import rlkit.torch.pytorch_util as ptu
 import matplotlib
 import os
@@ -29,22 +29,6 @@ class ContinuousRelabeler(RandomRelabeler):
 
     def get_features_matrix(self, paths):
         return np.array([self.get_features(path) for path in paths])
-
-class DIAYNContinuousRelabeler(DIAYNRandomRelabeler):
-    def __init__(self, dim=1, low=-1.0, high=1.0, **kwargs):
-        super().__init__(**kwargs)
-        self.latent_space = spaces.Box(low=low, high=high, shape=(dim,))
-
-    def sample_task(self):
-        return self.latent_space.sample()
-
-    def get_features(self, path, latent=None):
-        raise NotImplementedError
-
-
-    def get_features_matrix(self, paths):
-        return np.array([self.get_features(path) for path in paths])
-
 
 
 class MountainCarRelabeler(ContinuousRelabeler):

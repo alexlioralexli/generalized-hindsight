@@ -128,7 +128,7 @@ def diayn_multitask_rollout_with_relabeler(
     if latent is None:
         latent = agent.skill_dist.sample()
         if render:
-            # print("Current latent:", latent)
+            print("Current latent:", latent)
     if render and (isinstance(relabeler, ReacherRelabelerWithGoal)
                    or isinstance(relabeler, ReacherRelabelerWithFixedGoal)
                    or isinstance(relabeler, ReacherRelabelerWithGoalSimple)
@@ -157,6 +157,7 @@ def diayn_multitask_rollout_with_relabeler(
     device = torch.device("cuda")
     skill = utils.to_np(agent.skill_dist.sample())
     skill_diversity = torch.as_tensor(skill, device=device).float()
+    print(f"Max path length in rollouts is: {max_path_length}")
     while path_length < max_path_length:
         dict_obs.append(o)
         if hasattr(env, 'env'):
@@ -344,7 +345,7 @@ def multitask_rollout_with_relabeler(
     if latent is None:
         latent = relabeler.sample_task()
         if render:
-            # print("Current latent:", latent)
+            print("Current latent:", latent)
     if render and (isinstance(relabeler, ReacherRelabelerWithGoal)
                    or isinstance(relabeler, ReacherRelabelerWithFixedGoal)
                    or isinstance(relabeler, ReacherRelabelerWithGoalSimple)

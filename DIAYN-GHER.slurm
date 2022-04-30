@@ -7,7 +7,7 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gres=gpu:1
-#SBATCH --mem=64G
+#SBATCH --mem=32G
 #SBATCH -c 2
 
 ## TODO: Run your hyperparameter search in a singularity container. Remember to 
@@ -20,10 +20,12 @@ singularity \
     /scratch/work/public/singularity/cuda11.2.2-cudnn8-devel-ubuntu20.04.sif \
     /bin/bash -c "
 source /ext3/env.sh
-#source /ext3/pytorch_sac
+source /ext3/pytorch_sac
 ## FOR GYM USE 210, for HYDRA use 200
 export LD_LIBRARY_PATH=/home/yb1025/.mujoco/mujoco210/bin:\$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/.singularity.d/libs:\$LD_LIBRARY_PATH
+## export OMP_NUM_THREADS=1 -> DID NOT WORK
+## export MKL_NUM_THREADS=1 -> DID NOT WORK
 python launch_diayn.py
 "
 
