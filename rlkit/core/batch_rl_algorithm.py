@@ -8,7 +8,7 @@ from rlkit.samplers.data_collector import PathCollector
 class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
     def __init__(
             self,
-            trainer,
+            agent,
             exploration_env,
             evaluation_env,
             cfg, 
@@ -106,6 +106,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 range(self._start_epoch, self.num_epochs),
                 save_itrs=True,
         ):
+            print(f"NUM EPOCHS IS: {self.num_epochs}")
 
             """
                 MAX PATH LENGTH IN ALGO KWARGS IS 15.

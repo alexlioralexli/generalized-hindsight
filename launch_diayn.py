@@ -50,6 +50,7 @@ from rlkit.launchers.launcher_util import setup_logger, set_seed, run_experiment
 from rlkit.torch.networks import LatentConditionedMlp
 from rlkit.torch.torch_rl_algorithm import TorchDIAYNBatchRLAlgorithm
 from rlkit.data_management.task_relabeling_replay_buffer import MultiTaskReplayBuffer
+
 from rlkit.samplers.data_collector.path_collector import TaskConditionedPathCollector, DIAYNTaskConditionedPathCollector
 from rlkit.torch.sac.policies import MakeDeterministicLatentPolicy, LatentConditionedTanhGaussianPolicy, \
     TanhGaussianPolicy
@@ -233,11 +234,8 @@ class Workspace(object):
 
 
         qf1, qf2 = agent.critic.qValueReturn()
-        # print(f"qf1 is : {qf1}, qf2 is: {qf2}")
-
 
         target_qf1, target_qf2 = agent.critic_target.qValueReturn()
-        # print(f"target_qf1 is : {target_qf1}, qf2 is: {target_qf2}")
 
 
         #Network creation -> Can be taken directly from DIAYN. NETWORKs instantiated using train.py
@@ -381,7 +379,6 @@ class Workspace(object):
                                             int(cfg.replay_buffer_capacity),
                                             self.device)
 
-        """
         replay_buffer = MultiTaskReplayBuffer(
             agent=agent,
             env=expl_env,
@@ -431,7 +428,7 @@ class Workspace(object):
 
 
         algorithm = TorchDIAYNBatchRLAlgorithm(
-            trainer=agent,
+            agent = agent,
             exploration_env=expl_env,
             evaluation_env=eval_env,
             exploration_data_collector=expl_path_collector,

@@ -61,11 +61,10 @@ insert_time: false
 latent_shape_multiplier : 1
 latent_to_all_layers: false
 n_experiments: -1 
-# IN exp name add date as well. 
 exp_name: DIAYN-GHER-ANTENV
 extra: SEED_1
 test: false
-epochs: 2
+epochs: 1000
 save_videos: false
 safetyfn: newlog
 energyfn: velocity
