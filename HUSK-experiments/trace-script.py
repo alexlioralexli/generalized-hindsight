@@ -24,6 +24,12 @@ import numpy as np
 import joblib
 import tensorflow as tf
 import os
+
+"""
+    EXTERNAL LIBRARIES FROM SAC
+
+"""
+
 from sac.misc import utils
 from sac.policies.hierarchical_policy import FixedOptionPolicy
 from sac.misc.sampler import rollouts
