@@ -1,0 +1,4 @@
+[2022-06-03 20:52:11,042] dummy_gpu.py [I] GPU Stats: Total: 16160, Free: 16160 Used: 0
+[2022-06-03 20:52:11,042] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-03 20:52:45,722] dummy_gpu.py [I] GPU Stats: Total: 16160, Free: 15494 Used: 666
+[2022-06-03 20:52:45,722] dummy_gpu.py [D] Running dummy GPU job for 30 seconds

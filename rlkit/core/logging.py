@@ -296,7 +296,7 @@ class Logger(object):
             elif self._snapshot_mode == "gap_and_last":
                 if itr % self._snapshot_gap == 0:
 
-                    
+
                     file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
                     print(f"Params are : {params}")
                     # print(f"CUDA value : {torch.cuda.device_count()}")

@@ -1,0 +1,112 @@
+No personal conf_private.py found.
+doodad not detected
+2022-06-03 20:52:20.862217 EDT | Variant:
+2022-06-03 20:52:20.862463 EDT | {
+  "seed": 1,
+  "algorithm": "DIAYN",
+  "env_name": "AntEnv",
+  "algo_kwargs": {
+    "batch_size": 128,
+    "num_epochs": 2,
+    "num_eval_steps_per_epoch": 0,
+    "num_expl_steps_per_train_loop": 1000,
+    "num_trains_per_train_loop": 100,
+    "min_num_steps_before_training": 1000,
+    "max_path_length": 1000,
+    "num_train_loops_per_epoch": 1
+  },
+  "trainer_kwargs": {
+    "discount": 0.99,
+    "soft_target_tau": 0.005,
+    "target_update_period": 1,
+    "policy_lr": 0.003,
+    "qf_lr": 0.003,
+    "reward_scale": 1,
+    "use_automatic_entropy_tuning": true
+  },
+  "replay_buffer_kwargs": {
+    "max_replay_buffer_size": 5000000.0,
+    "latent_dim": 1,
+    "approx_irl": true,
+    "add_random_relabeling": false,
+    "cem": false,
+    "plot": false
+  },
+  "relabeler_kwargs": {
+    "relabel": true,
+    "use_adv": false,
+    "skill_dim": 4,
+    "alg": "DIAYN",
+    "n_sampled_latents": 5,
+    "n_to_take": 1,
+    "cache": true
+  },
+  "qf_kwargs": {
+    "hidden_sizes": [
+      256,
+      256
+    ],
+    "latent_shape_multiplier": 1,
+    "latent_to_all_layers": false
+  },
+  "policy_kwargs": {
+    "hidden_sizes": [
+      256,
+      256
+    ],
+    "latent_shape_multiplier": 1,
+    "latent_to_all_layers": false
+  },
+  "path_collector_kwargs": {
+    "save_videos": false
+  },
+  "use_advantages": false,
+  "proper_advantages": true,
+  "plot": false,
+  "test": false,
+  "gpu": 0,
+  "mode": "here_no_doodad",
+  "local_docker": false,
+  "insert_time": false,
+  "latent_shape_multiplier": 1,
+  "env_kwargs": {
+    "use_xy": true,
+    "contact_forces": true
+  },
+  "gpu_id": 0
+}
+/ext3/pytorch_sac/lib/python3.6/site-packages/gym/spaces/box.py:74: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  "Box bound precision lowered by casting to {}".format(self.dtype)
+workspace: /home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/husk_job_scripts/exp/2022.06.03/2052_diayn_gher_HUSK-ANT-S1-DISCRETE-AIR
+The agent recognised is: {'name': 'diayn_gher', 'class': 'agent.diayn_gher.DIAYNGHERAgent', 'params': {'obs_dim': '???', 'action_dim': '???', 'action_range': '???', 'skill_dim': 4, 'obs_dim_weights': [1, 1], 'skill_type': 'discrete', 'device': '${device}', 'critic_cfg': '${double_q_critic}', 'actor_cfg': '${diag_gaussian_actor}', 'discriminator_cfg': '${discriminator}', 'discount': 0.99, 'init_temperature': 0.1, 'alpha_lr': 0.0001, 'alpha_betas': [0.9, 0.999], 'actor_lr': 0.0001, 'actor_betas': [0.9, 0.999], 'actor_update_frequency': 1, 'critic_lr': 0.0001, 'critic_betas': [0.9, 0.999], 'critic_tau': 0.005, 'critic_target_update_frequency': 2, 'discriminator_lr': 0.0001, 'discriminator_betas': [0.9, 0.999], 'discriminator_update_frequency': 1, 'batch_size': 1024, 'learnable_temperature': True, 'log_frequency': 10000, 'log_save_tb': True, 'name_env': 'AntEnv', 'max_replay_buffer_size': 5000000.0, 'plotter': 'None', 'render_eval_paths': False, 'use_automatic_entropy_tuning': True}}
+AntEnv
+DEVICE IS: cuda:0
+the number of cpu threads: 2
+Max path length is: 1000
+Num steps: 1000, difference is: 1000
+Max path length with this loop is: 1000
+Max path length in rollouts is: 1000
+Traceback (most recent call last):
+  File "/home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/launch_diayn.py", line 552, in <module>
+    main()
+  File "/ext3/pytorch_sac/lib/python3.6/site-packages/hydra/main.py", line 24, in decorated_main
+    strict=strict,
+  File "/ext3/pytorch_sac/lib/python3.6/site-packages/hydra/_internal/utils.py", line 174, in run_hydra
+    overrides=args.overrides,
+  File "/ext3/pytorch_sac/lib/python3.6/site-packages/hydra/_internal/hydra.py", line 86, in run
+    job_subdir_key=None,
+  File "/ext3/pytorch_sac/lib/python3.6/site-packages/hydra/plugins/common/utils.py", line 109, in run_job
+    ret.return_value = task_function(task_cfg)
+  File "/home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/launch_diayn.py", line 549, in main
+    workspace.experiment()
+  File "/home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/launch_diayn.py", line 325, in experiment
+    algorithm.train()
+  File "/home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/rlkit/core/rl_algorithm.py", line 48, in train
+    self._train()
+  File "/home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/rlkit/core/batch_rl_algorithm.py", line 97, in _train
+    discard_incomplete_paths=False,
+  File "/home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/rlkit/samplers/data_collector/path_collector.py", line 270, in collect_new_paths
+    hide_latent=self.hide_latent
+  File "/home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/rlkit/samplers/rollout_functions.py", line 271, in diayn_multitask_rollout_with_relabeler
+    done_no_max.append(d_new)
+NameError: name 'done_no_max' is not defined

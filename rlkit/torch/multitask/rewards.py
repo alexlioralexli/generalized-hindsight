@@ -21,12 +21,14 @@ class Relabeler(object):
                  test=False,
                  sliding_normalization=False,
                  is_eval=False,
+                 skill_dim=None,
                  alg="SAC",
                  agent=None,
                  ):
         if alg=="DIAYN":
             self.agent=agent 
         self.alg=alg
+        self.skill_dim = skill_dim
         self.discount = discount
         self.relabel = relabel
         self.use_adv = use_adv
@@ -71,12 +73,18 @@ class Relabeler(object):
             reward_list = np.arange(len(rewards))
             # print(f"Type Study: Type of self.discount : {type(self.discount)}, Type of reward_list: {type(reward_list)}, Type of data type: {reward_list.dtype}")
             multipliers = np.power(self.discount, np.arange(len(rewards)))
+            print(f"Multipliers in HUSK {multipliers}")
             result = np.sum(rewards * multipliers)
+
+            print(f"The result calculated for HUSK: {result}")
             return np.sum(rewards * multipliers)
         elif self.alg == "SAC":
             assert len(rewards.shape) == 1
             reward_list = np.arange(len(rewards))
             multipliers = np.power(self.discount, np.arange(len(rewards)))
+            print(f"Multipliers in GHER: {multipliers}")
+            result = np.sum(rewards * multipliers)
+            print(f"Result in GHER: {result}")
             return np.sum(rewards * multipliers)
 
     def get_discounted_path_reward(self, path, latent):
@@ -107,13 +115,17 @@ class Relabeler(object):
     def get_both_values(self, obs, latents):
         # print(f"Latents is : {type(latents)}, its shape is : {latents.shape}, print for latent : {latents}")
         # print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
+        print(f"VALUES IN GET BOTH VALUES : {self.alg}")
         if self.alg == "SAC":
             obs, latent = ptu.from_numpy(obs).unsqueeze(0).repeat(len(latents), 1), ptu.from_numpy(latents)
+            
+            print(f"obs in get both values in GHER: {obs}, latent : {latent}")
             # print(f"AFTER RESHAPE")
             # print(f"latent is : {type(latent)}, its shape is : {latent.shape}, print for latent : {latent}")
             # print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
 
             actions = self.action_fn(obs, latent, deterministic=True)[0]
+            print(f"Actions in get both values in GHER : {actions}")
             # print(f"Actions from action_fn are as follows: {actions}")
             # print(f"THE RESULTS OF THE V1, V2 are: {self.q1(obs, actions, latent).shape} , {self.q1(obs, actions, latent).shape}")
             return ptu.get_numpy(self.q1(obs, actions, latent)), ptu.get_numpy(self.q2(obs, actions, latent))
@@ -127,11 +139,18 @@ class Relabeler(object):
             #print(f"Skill tensor is : {skill_tensor}, the shape is : {skill_tensor.shape}")
             obs_tensor = torch.from_numpy(obs).type(torch.DoubleTensor).unsqueeze(0).repeat(len(latents), 1).to(device)
             action_list = []
+            
+            print(f"skill tensor in HUSK : {skill_tensor}, the shape  of skill tensor is : {skill_tensor.shape}")
+            print(f"obs tensor in HUSK: {obs_tensor}, the shape of obs_tensor is : {obs_tensor.shape} ")
+            
+            
+            
             for index in range(len(latents)):
                 action_np = self.agent.act(obs, latents[index], sample=True)
                 action_pyList = action_np.tolist()
                 action_list.append(action_pyList)
             action_tensor = torch.DoubleTensor(action_list).to(device)
+            print(f"Action tensor in HUSK: {action_tensor}, the shape is : {action_tensor.shape}")
             obs_action_skill = torch.cat([obs_tensor, action_tensor, skill_tensor], dim=-1).float().to(device)
             return ptu.get_numpy(self.agent.critic.Q1(obs_action_skill)), ptu.get_numpy(self.agent.critic.Q2(obs_action_skill))
 
@@ -171,9 +190,20 @@ class RandomRelabeler(Relabeler):
                 latents = [self.agent.skill_dist.sample() for _ in range(self.n_sampled_latents - 1)]
                 latents.append(path['skills'][0])
             rewards = [self.calculate_path_reward(path, latent, True) for latent in latents]
-        
+        """
+            USING ADVANTAGES
+
+        """
         if self.use_adv:  # calculate advantages
+
+            """
+                GET BASELINE ESTIMATES -> GET BOTH VALUES
+            """
+
             baselines = self.get_baseline_estimates(path['observations'][0], np.array(latents)).flatten()
+            
+            print(f"BASELINES IN USE ADVANTAGES: {baselines}, alg is: {self.alg}")
+            
             if self.subtract_final_value:
                 final_baselines = self.get_baseline_estimates(path['next_observations'][-1], np.array(latents)).flatten() * self.discount**len(path['observations'])
             else:
@@ -311,6 +341,9 @@ class RandomRelabeler(Relabeler):
         pass 
     def approx_irl_relabeling(self, paths):
         # print(f"Self.relabel is : {self.relabel}")
+        print("In approx IRL relabeling")
+        print(f"Paths received are: {paths}")
+        print(f"Len of paths is: {len(paths)}")
         device = torch.device("cuda")
         """
 
@@ -340,17 +373,27 @@ class RandomRelabeler(Relabeler):
         # print(f"LATENTS, after path : {latents}the shape is: {len(latents)}")
         elif self.alg == "DIAYN":
 
+            """
+                ALEX: In discrete setting, should we hard-code the latents instead of sampling them like this?
+
+
+            """
+
             if self.n_sampled_latents == 1:
                 latents = self.agent.skill_dist.sample()
             #skills = [utils.to_np(self.agent.skill_dist.sample())]
             else:
-                latents = [self.agent.skill_dist.sample() for _ in range(self.n_sampled_latents - len(paths))]
+                latents = [self.agent.skill_dist.sample() for _ in range(self.skill_dim-1)]
+                print(f"Latents calculated are: {latents}")
             
             for path in paths:
                 latents.append(path['skills'][0])
+
+            print(f"Latents after append is: {latents}")
         # latents = [np.concatenate([latent, np.array([np.pi, 0.25])]) for latent in x]
         # form matrix with |paths| rows x |latents| cols
         if self.cache:
+            print(f"I am in cache")
             #new_paths = remove_extra_trajectory_info(paths)
             self.cached_paths = (paths + self.cached_paths)[:500]
             reward_matrix = self.get_reward_matrix(self.cached_paths, latents)
@@ -381,6 +424,10 @@ class RandomRelabeler(Relabeler):
                 else:
                     winnner_traj_rewards = reward_matrix[i, winners]
                     if self.use_adv:  # break ties by traj advantage
+                        """
+                            IF USE ADVANTAGES
+
+                        """
                         baselines = self.get_baseline_estimates(path['observations'][0], np.array([latents[int(winner)] for winner in winners])).flatten()
                         advantages = winnner_traj_rewards.flatten() - baselines
                         best_latent_index = winners[np.argmax(advantages)]

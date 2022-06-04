@@ -106,18 +106,17 @@ def diayn_multitask_rollout_with_relabeler(
     dict_next_obs = []
     observations = []
     actions = []
-    rewards = []
-    terminals = []
-    agent_infos = []
-    env_infos = []
+    #rewards = []
+
+    # agent_infos = []
+    # env_infos = []
     next_observations = []
     latents = []
     qpos = []
     next_qpos = []
     rgb_array = []
     skills = []
-    dones = []
-    done_no_max = []
+    # done_no_max = []
     path_length = 0
     agent.reset()
 
@@ -155,7 +154,7 @@ def diayn_multitask_rollout_with_relabeler(
         agent.eval()
 
     device = torch.device("cuda")
-    skill = utils.to_np(agent.skill_dist.sample())
+    skill = utils.to_np(latent)
     skill_diversity = torch.as_tensor(skill, device=device).float()
     print(f"Max path length in rollouts is: {max_path_length}")
     while path_length < max_path_length:
@@ -189,8 +188,9 @@ def diayn_multitask_rollout_with_relabeler(
 
         # print(f"SKILL INSIDE THE ROLLOUT IS : {skill}, obs is : {o}")
 
-
+        
         a = agent.act(o, skill, sample=True)
+        
 
         """
             DIAYN AGENT IS MESSED UP, SAME VALUES:[8.00 8.00 8.00 8.00 8.00 8.00 8.00 8.00]
@@ -246,7 +246,7 @@ def diayn_multitask_rollout_with_relabeler(
             # r, d_new = relabeler.reward_done()
             r, d_new = relabeler.reward_done(o, a, latent, skill_diversity, next_obs)
         d = d or d_new
-        rewards.append(r)
+        #rewards.append(r)
         if hasattr(env, 'env'):
             next_qpos.append(env.env.sim.data.qpos.flat[:2])
         if render:
@@ -260,12 +260,12 @@ def diayn_multitask_rollout_with_relabeler(
         # print(o, a, next_o, r, latent, np.array_equal(o, latent))
         observations.append(o)
         latents.append(latent)
-        terminals.append(d)
+        #terminals.append(d)
         actions.append(a)
         next_observations.append(next_o)
         dict_next_obs.append(next_o)
         # agent_infos.append(agent_info)
-        env_infos.append(env_info)
+        #env_infos.append(env_info)
         path_length += 1
         # dones.append(done)
         done_no_max.append(d_new)
@@ -287,11 +287,11 @@ def diayn_multitask_rollout_with_relabeler(
         latents=latents,
         actions=actions,
         next_observations=next_observations,
-        terminals=np.array(terminals).reshape(-1, 1),
+        #terminals=np.array(terminals).reshape(-1, 1),
         # agent_infos=agent_infos,
-        env_infos=env_infos,
+        #env_infos=env_infos,
         full_observations=dict_obs,
-        rewards=np.array(rewards).reshape(-1, 1),
+        #rewards=np.array(rewards).reshape(-1, 1),
         qpos=np.array(qpos),
         next_qpos=np.array(next_qpos),
         skills = skills, 

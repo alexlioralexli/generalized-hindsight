@@ -26,7 +26,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             log_exploration=True,
     ):
         super().__init__(
-            trainer,
+            agent,
             exploration_env,
             evaluation_env,
             exploration_data_collector,
@@ -99,9 +99,19 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             # print(f"KEYS OF ORIGINAL init paths are: {len(init_expl_paths)}")
             # print(f"the first index is a : {type(init_expl_paths)}")
             # print(f"THE KEYS OF THE FIRST INDEX ARE: {init_expl_paths[0].keys()}")
-            self.replay_buffer.add_paths(init_expl_paths)
+            epoch_dummy = -1
+            
+            """ 
+                UN COMMENT THIS LATER.
+
+            """
+
+
+            # self.replay_buffer.add_paths(init_expl_paths, epoch_dummy)
             self.expl_data_collector.end_epoch(-1)
 
+        # REMOVING 1 EPOCH, REMOVE THIS LINE LATER.
+        self.num_epochs -= 1
         for epoch in gt.timed_for(
                 range(self._start_epoch, self.num_epochs),
                 save_itrs=True,
@@ -142,17 +152,31 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
 
                 """
 
-                print(f"Num train loops per epoch is: {self.num_train_loops_per_epoch}")
-                
-                
-                self.replay_buffer.add_paths(new_expl_paths)
+        
+              
+                self.replay_buffer.add_paths(new_expl_paths, epoch)
+
+                """
+                    ADD PATHS 
+
+                    
+
+                """
                 gt.stamp('data storing', unique=False)
 
                 # self.training_mode(True)
                 self.trainer.trainParamSet(True)
                 for _ in range(self.num_trains_per_train_loop):
+
+
+                    """
+                        RANDOM BATCH -> REPLAY BUFFER -> RANDOM_BATCH
+
+                    """
                     train_data = self.replay_buffer.random_batch(
                         self.batch_size)
+
+                    print(f"The train data is: {train_data}")
 
                         # THE NETWORKS ARE UPDATED HERE. SO DIAYN WILL BE TIED UP HERE.
                     self.trainer.train(train_data)
