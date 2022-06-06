@@ -106,7 +106,7 @@ def diayn_multitask_rollout_with_relabeler(
     dict_next_obs = []
     observations = []
     actions = []
-    #rewards = []
+    rewards = []
 
     # agent_infos = []
     # env_infos = []
@@ -116,7 +116,7 @@ def diayn_multitask_rollout_with_relabeler(
     next_qpos = []
     rgb_array = []
     skills = []
-    # done_no_max = []
+    done_no_max = []
     path_length = 0
     agent.reset()
 
@@ -188,9 +188,8 @@ def diayn_multitask_rollout_with_relabeler(
 
         # print(f"SKILL INSIDE THE ROLLOUT IS : {skill}, obs is : {o}")
 
-        
+
         a = agent.act(o, skill, sample=True)
-        
 
         """
             DIAYN AGENT IS MESSED UP, SAME VALUES:[8.00 8.00 8.00 8.00 8.00 8.00 8.00 8.00]
@@ -246,7 +245,8 @@ def diayn_multitask_rollout_with_relabeler(
             # r, d_new = relabeler.reward_done()
             r, d_new = relabeler.reward_done(o, a, latent, skill_diversity, next_obs)
         d = d or d_new
-        #rewards.append(r)
+        #We need reward for some reason, make sure you find out how this is calculated in DIAYN.
+        rewards.append(r)
         if hasattr(env, 'env'):
             next_qpos.append(env.env.sim.data.qpos.flat[:2])
         if render:
@@ -290,8 +290,8 @@ def diayn_multitask_rollout_with_relabeler(
         #terminals=np.array(terminals).reshape(-1, 1),
         # agent_infos=agent_infos,
         #env_infos=env_infos,
-        full_observations=dict_obs,
-        #rewards=np.array(rewards).reshape(-1, 1),
+        # full_observations=dict_obs,
+        rewards=np.array(rewards).reshape(-1, 1),
         qpos=np.array(qpos),
         next_qpos=np.array(next_qpos),
         skills = skills, 

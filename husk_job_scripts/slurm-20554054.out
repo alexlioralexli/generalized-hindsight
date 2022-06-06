@@ -1,0 +1,2 @@
+/bin/bash: line 2: source: /ext3/pytorch_sac: is a directory
+slurmstepd: error: *** JOB 20554054 ON ga006 CANCELLED AT 2022-06-05T21:42:35 ***

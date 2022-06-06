@@ -1,4 +1,4 @@
-from collections import OrderedDict
+import os
 
 import numpy as np
 import torch
@@ -6,12 +6,8 @@ import torch.optim as optim
 from torch import nn as nn
 
 
-import os
 from logger import Logger
 
-import rlkit.torch.pytorch_util as ptu
-from rlkit.core.eval_util import create_stats_ordered_dict
-from rlkit.torch.torch_rl_algorithm import TorchTrainer
 
 import numpy as np
 import torch.nn.functional as F
@@ -30,6 +26,9 @@ from rlkit.core.online_rl_algorithm import OnlineRLAlgorithm
 from rlkit.core.trainer import Trainer
 from rlkit.torch.core import np_to_pytorch_batch
 
+import rlkit.torch.pytorch_util as ptu
+from rlkit.core.eval_util import create_stats_ordered_dict
+from rlkit.torch.torch_rl_algorithm import TorchTrainer
 
 # from .agentFile import Agent
 from .agentFile import Agent
@@ -49,23 +48,6 @@ constructor
 
 
 """
-
-# class Agent(object):
-#     def reset(self):
-#         """For state-full agents this function performs reseting at the beginning of each episode."""
-#         pass
-
-#     @abc.abstractmethod
-#     def train(self, training=True):
-#         """Sets the agent in either training or evaluation mode."""
-
-#     @abc.abstractmethod
-#     def update(self, replay_buffer, logger, step):
-#         """Main function of the agent that performs learning."""
-
-#     @abc.abstractmethod
-#     def act(self, obs, sample=False):
-#         """Issues an action given an observation."""
 
 class DIAYNGHERAgent(Agent):
     """DIAYN algorithm."""
@@ -226,9 +208,9 @@ class DIAYNGHERAgent(Agent):
     def setLogger(self, logger):
         self.logger = logger
     
-    def train(self, np_batch, training = True):
+    def train(self, np_batch, step, training = True):
         print("I AM INSIDE CORRECT TRAIN FUNCTION IN DIAYN GHER")
-        self._num_train_steps += 1
+        # self._num_train_steps += 1
         batch = np_to_pytorch_batch(np_batch)
 
         """
@@ -237,7 +219,7 @@ class DIAYNGHERAgent(Agent):
             IS IT FOLLOWING THE CORRECT LOGIC?
 
         """
-        self.update(batch, self.logger, self._num_train_steps)
+        self.update(batch, self.logger, step)
 
     @property
     def alpha(self):
@@ -382,7 +364,10 @@ class DIAYNGHERAgent(Agent):
 
         if not singularSkill:
             skills_log_prob = self.skill_dist.log_prob(skill).unsqueeze_(1)
+            print(f"I am not in singular skill")
+            print(f"Skill log prob here look like {skills_log_prob}")
         else:
+            print(f"I am in singularSkill")
             if isinstance(skill, (np.ndarray, np.generic)):
                 # print(f"AGAIN INSIDE ISISNTANCE")
                 skill = torch.from_numpy(skill).to(device)
@@ -407,8 +392,14 @@ class DIAYNGHERAgent(Agent):
         elif self.env_name == "HalfCheetahEnv":
             #print(f"The next obs in HalfCheetah Are: {next_obs.shape}, the type is : {type(next_obs)}")
             pass 
+        elif self.env_name == "ReacherEnv":
+            pass
+        elif self.env_name == "HopperEnv":
+            pass
+        elif self.env_name == "FetchReachEnv":
+            pass
             
-
+        # print(f"I am in the agent's diversity reward, my skill is : {skill}")
         # print("The shape of next_obs is : {}".format(next_obs.size()))
         # #print("The shape of the array is: {}".format(new_next_obs.size()) )
         # print(self.obs_dim_weights.size())
@@ -437,24 +428,23 @@ class DIAYNGHERAgent(Agent):
 
         #WHERE DOES THE REWARD ORIGINIATE? is it the correct reward from the discriminator?
         reward = batch['rewards']
-        terminals = batch['terminals']
+        # terminals = batch['terminals']
         obs = batch['observations']
         actions = batch['actions']
         next_obs = batch['next_observations']
         latents = batch['latents']
+        # original_skill = batch['pureSkills']
         
-        
-        skill = batch['skill']  #256 4 
-
+        skill = batch['skill'] 
         print("I AM INSIDE: UPDATE")
 
+        print(f"Skill received is: {skill}")
 
+        pureSkill = batch["pureSkill"]
+        
         not_dones_no_max =  batch['not_dones_no_max']
 
-        # diversity_reward = batch['diversity_reward']
 
-
-        #3 ARE MISSING:
         """ 
         1. skill 
         2. not_done
@@ -495,7 +485,8 @@ class DIAYNGHERAgent(Agent):
                                      self.critic_tau)
 
         if step % self.discriminator_update_frequency == 0:
-            self.update_discriminator(obs, skill, next_obs, logger, step)
+            # Discriminator is trained with pureSkill
+            self.update_discriminator(obs, pureSkill, next_obs, logger, step)
 
 
     """

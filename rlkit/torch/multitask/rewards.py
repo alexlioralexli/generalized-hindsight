@@ -65,6 +65,7 @@ class Relabeler(object):
         raise NotImplementedError
 
     def get_discounted_reward(self, rewards):
+        print("I am inside get_discounted_reward in Relabeler")
         if self.alg == "DIAYN":
             if not (isinstance(rewards, np.ndarray)):
                 rewards = rewards.cpu().detach().numpy()
@@ -88,6 +89,9 @@ class Relabeler(object):
             return np.sum(rewards * multipliers)
 
     def get_discounted_path_reward(self, path, latent):
+        print(f"I am inside get_discounted_path_reward in rewards.py inside Relabeler")
+        print(f"Path and latent received in get_discounted_path_reward: {path}, {latent}")
+        print(f"Latent received in get_discounted_path_Reward: {latent}")
         if self.alg == "SAC":
             path_rewards = self.calculate_path_reward(path, latent)
             return self.get_discounted_reward(path_rewards)
@@ -333,10 +337,6 @@ class RandomRelabeler(Relabeler):
             new_skills = [self.skill_distribution(mu, variance) for _ in n-1]
             fitness = calculate_fitness(new_skills, path)
             mu, variance = dist_values(fitness)
-
-
-            
-
             pass 
         pass 
     def approx_irl_relabeling(self, paths):
@@ -367,9 +367,11 @@ class RandomRelabeler(Relabeler):
                 latents = [self.sample_task()]
             else:
                 latents = [self.sample_task() for _ in range(self.n_sampled_latents - len(paths))]
+            print(f"Latents calculated in GHER are: {latents}")
             # print(f"LATENTS, before path : {latents}, the shape is: {len(latents)}")
             for path in paths:
                 latents.append(path['latents'][0])
+
         # print(f"LATENTS, after path : {latents}the shape is: {len(latents)}")
         elif self.alg == "DIAYN":
 
@@ -432,10 +434,14 @@ class RandomRelabeler(Relabeler):
                         advantages = winnner_traj_rewards.flatten() - baselines
                         best_latent_index = winners[np.argmax(advantages)]
                     else:  # break ties by traj reward
+                        print(f"I am in the no use advantage")
                         best_latent_index = winners[np.argmax(winnner_traj_rewards)]  # break ties by traj reward
 
                     best_latents.append(latents[int(best_latent_index)])
             if self.alg == "DIAYN":
+
+                    print(f"I am inside DIAYN, the best_latents are: {best_latents}")
+
                     return [[z] for z in best_latents], \
                    [[self.calculate_path_reward(path, latent, True)] for path, latent in zip(paths, best_latents)]
 
@@ -617,6 +623,7 @@ class MakeDeterministicRelabeler(RandomRelabeler):
         return self._wrapped_relabeler.n_sampled_latents
 
     def get_reward_matrix(self, paths, latents):
+        print("I am inside this reward matrix")
         return self._wrapped_relabeler.get_reward_matrix(paths, latents)
 
 # make caching paths more memory efficient

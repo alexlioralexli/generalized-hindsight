@@ -43,37 +43,6 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
         self.num_train_loops_per_epoch = num_train_loops_per_epoch
         self.num_expl_steps_per_train_loop = num_expl_steps_per_train_loop
         self.min_num_steps_before_training = min_num_steps_before_training
-
-
-    #EVALUATE FUNCTION FROM DIAYN:
-
-    def evaluate(self):
-        average_episode_reward = 0
-        for episode in range(self.cfg.num_eval_episodes):
-            obs = self.env.reset()
-            self.agent.reset()
-            self.video_recorder.init(enabled=(episode < 3))
-            done = False
-            episode_reward = 0
-            skill = self.agent.skill_dist.sample()
-
-            while not done:
-                with utils.eval_mode(self.agent):
-                    action = self.agent.act(obs, skill, sample=False)
-                obs, reward, done, _ = self.env.step(action)
-                self.video_recorder.record(self.env)
-                episode_reward += reward
-
-            average_episode_reward += episode_reward
-            self.video_recorder.save(f'{self.step}_{episode}_skill_{skill.argmax().cpu().item()}.mp4')
-        average_episode_reward /= self.cfg.num_eval_episodes
-        self.logger.log('eval/episode_reward', average_episode_reward,
-                        self.step)
-        self.logger.dump(self.step)
-
-
-
-
     
     def _train(self):
 
@@ -166,20 +135,27 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
 
                 # self.training_mode(True)
                 self.trainer.trainParamSet(True)
-                for _ in range(self.num_trains_per_train_loop):
+                
+                #NUM TRAINS PER TRAIN LOOP IS 100! 
+                #WITH BATCH SIZE OF 128, 1000 IN ORIGINAL ROLLOUTS
+                #THERE IS AN EPOCH
+                for step in range(self.num_trains_per_train_loop):
 
-
+                    print(f"Num trains per loop is: {self.num_trains_per_train_loop}")
                     """
                         RANDOM BATCH -> REPLAY BUFFER -> RANDOM_BATCH
 
                     """
                     train_data = self.replay_buffer.random_batch(
                         self.batch_size)
+                    
 
-                    print(f"The train data is: {train_data}")
-
+                    print(f"The keys of train data is: {train_data.keys()}")
+                    sub_data = train_data["skill"]
+                    print(f"Len of train data is: {len(sub_data)}")
+                    print(f"The sub data is: {sub_data}")
                         # THE NETWORKS ARE UPDATED HERE. SO DIAYN WILL BE TIED UP HERE.
-                    self.trainer.train(train_data)
+                    self.trainer.train(train_data, step)
                 # if hasattr(self.trainer, '_base_trainer'):
                 #     self.trainer._base_trainer._update_target_networks()
                 # else:
@@ -262,13 +238,13 @@ class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
 
                 self.replay_buffer.add_paths(new_expl_paths)
                 gt.stamp('data storing', unique=False)
-
-                self.training_mode(True)
+                if self.alg == "SAC":
+                    self.training_mode(True)
                 # self.trainer.trainParamSet()
                 for _ in range(self.num_trains_per_train_loop):
                     train_data = self.replay_buffer.random_batch(
                         self.batch_size)
-
+                    print(f"The train data keys in GHER are: {train_data.keys()}")
                         # THE NETWORKS ARE UPDATED HERE. SO DIAYN WILL BE TIED UP HERE.
                     self.trainer.train(train_data)
                 # if hasattr(self.trainer, '_base_trainer'):
@@ -278,7 +254,7 @@ class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 # print("Reminder: changed the update target networks functionality")
                 gt.stamp('training', unique=False)
                 # self.trainer.trainParamSet(False)
-
-                self.training_mode(False)
+                if self.alg == "SAC":
+                    self.training_mode(False)
 
             self._end_epoch(epoch)

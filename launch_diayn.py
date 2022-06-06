@@ -178,12 +178,7 @@ class Workspace(object):
             float(expl_env.action_space.high.size)
         ]
 
-        # print(f"Observation space with DIAYN print statement: {expl_env.observation_space.shape[0]}")
-
-
-        # print(f"OBERSVATION SPACE:self.env.observation_space.shape {expl_env.observation_space.shape}")
-        # print(f"OBERSVATION SPACE:expl_env.observation_space.low.size {expl_env.observation_space.low.size}")
-
+        
         """
             INSTANTIATING AGENT OBJECT: TAKEN FROM DIAYN, LOOK AT HYDRA FILE
         """
@@ -204,71 +199,18 @@ class Workspace(object):
 
         """
 
-        #OBS DIM SETUP FROM GHER:
-        #DIAYN SETUP FROM: DIAYN FOLDER
-            # cfg.agent.params.obs_dim = self.env.observation_space.shape[0]
-            # cfg.agent.params.action_dim = self.env.action_space.shape[0]
-            # cfg.agent.params.action_range = [
-            #     float(self.env.action_space.low.min()),
-            #     float(self.env.action_space.high.max())
-            # ]
-
-            # Dimensions taken from expl env mentioned above. Will these match the dimension setup from DIAYN folder.
-        
-            
-            # obs_dim setup 
-     
-
-
-
-
-            #DIAYN instantiate, then you don't need a trainer right?
-
-        
+    
         """
             NEED TO REPLACE THE REPLAY Buffer with GHER ReplayBuffer.
 
         """
 
-
-
-
         qf1, qf2 = agent.critic.qValueReturn()
 
         target_qf1, target_qf2 = agent.critic_target.qValueReturn()
 
-
-        #Network creation -> Can be taken directly from DIAYN. NETWORKs instantiated using train.py
-        # qf1 = LatentConditionedMlp(
-        #     input_size=obs_dim + action_dim,
-        #     latent_size=latent_dim,
-        #     output_size=1,
-        #     **variant['qf_kwargs']
-        # )
-        # qf2 = LatentConditionedMlp(
-        #     input_size=obs_dim + action_dim,
-        #     latent_size=latent_dim,
-        #     output_size=1,
-        #     **variant['qf_kwargs']
-        # )
-        
-
-        #Policy is taken from here:  rlkit.torch.sac.policies
-
-
-        # Policy is just the actor:  You need to replace this by the policy network for DIAYN
         policy = agent.actor.returnPolicy()
-        # policy = LatentConditionedTanhGaussianPolicy(
-        #     obs_dim=obs_dim,
-        #     latent_dim=latent_dim,
-        #     action_dim=action_dim,
-        #     **variant['policy_kwargs']
-        # )
 
-
-
-
-        
         # Eval Policy :  rlkit.torch.sac.policies
 
         eval_policy = MakeDeterministicLatentPolicy(policy)
@@ -291,21 +233,9 @@ class Workspace(object):
 
 
         """
-        #Taken from : from rlkit.torch.sac.sac_gher import SACTrainer
-
-        #SAC TRAINER -> from policies. 
-
+       
         
 
-        # trainer = SACTrainer(
-        #     env=eval_env,
-        #     policy=policy,
-        #     qf1=qf1,
-        #     qf2=qf2,
-        #     target_qf1=target_qf1,
-        #     target_qf2=target_qf2,
-        #     **variant['trainer_kwargs']
-        # )
         expl_policy = policy
 
 
@@ -348,37 +278,6 @@ class Workspace(object):
             eval_relabeler.agentSet(agent)
 
 
-  
-
-        """
-            Add control flow for adding agent into the relabeler
-
-        """
-        # relabeler.agent = agent
-
-
-        # MULTI TASK RELABELER: 
-
-        """
-            Should be the same as we are using RLKIT with DIAYN.
-
-            WE KEEP THIS REPLAY BUFFER, DIAYN UPDATE FUNCTION. 
-            
-            Assuming, 
-
-            CODE TRAIL DONE: for elabeler
-
-
-
-
-            REPLAY BUFFER from DIAYN:
-
-                self.replay_buffer = ReplayBuffer(self.env.observation_space.shape,
-                                            self.env.action_space.shape,
-                                            (cfg.agent.params.skill_dim, ),
-                                            int(cfg.replay_buffer_capacity),
-                                            self.device)
-
         replay_buffer = MultiTaskReplayBuffer(
             agent=agent,
             env=expl_env,
@@ -391,24 +290,7 @@ class Workspace(object):
         )
 
 
-        """
-
-            EvalPathCollector.
-            ExplPathCollector. 
-
-            Do we still need these? Yes, we need these. Simple trajectory collectors.
-
-            How do they fit into the algorithm?
-
-
-
-            SHOULD BE UNTOUCHED.
-
-
-            YOU WILL NEED TO CHANGE THE POLICY HERE, AND MAKE SURE THE RELABELER IS BEING USED CORRECTLY
-
-
-        """
+      
         eval_path_collector = DIAYNTaskConditionedPathCollector(
             eval_env,
             eval_policy,
@@ -437,7 +319,7 @@ class Workspace(object):
             cfg = self.cfg,
             **self.variant['algo_kwargs']
         )
-# /        print(f"DEVICE IS: {ptu.device}")
+        print(f"DEVICE IS: {ptu.device}")
         algorithm.to(ptu.device)
         print("the number of cpu threads: {}".format(torch.get_num_threads()))
         algorithm.train()
@@ -445,7 +327,7 @@ class Workspace(object):
 
 
 global variant
-@hydra.main(config_path='/home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/diayn-config/train.yaml', strict=True)
+@hydra.main(config_path='/home/yb1025/Research/GRAIL/HUSK/accelerate-skillDiscovery/generalized-hindsight/diayn/diayn-config/train.yaml', strict=True)
 def main(cfg):
 
     if cfg.n_experiments != -1:
@@ -490,14 +372,17 @@ def main(cfg):
             use_automatic_entropy_tuning=True,
         ),
         replay_buffer_kwargs=dict(
-            max_replay_buffer_size=100000,
+            max_replay_buffer_size=cfg.max_replay_buffer_size,
             latent_dim=int(3),
             approx_irl=cfg.irl,
+            add_random_relabeling=cfg.random_relabel,
+            cem = cfg.cem,
             plot=cfg.plot,
         ),
         relabeler_kwargs=dict(
             relabel=cfg.relabel,
             use_adv=cfg.use_advantages,
+            skill_dim = cfg.skill_dim,
             alg=cfg.alg,
             n_sampled_latents=cfg.n_sampled_latents,
             n_to_take=cfg.n_to_take,
@@ -638,7 +523,7 @@ def main(cfg):
         variant['gpu_id'] = i % NUM_GPUS_AVAILABLE
 
     for variant in all_variants:
-        print(f"Len of all variants: {len(all_variants)}")
+        # print(f"Len of all variants: {len(all_variants)}")
         if cfg.ec2:
 
             #from rlkit.launchers.launcher_util import setup_logger, set_seed, run_experiment

@@ -36,9 +36,10 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         if self.alg == "DIAYN":
             max_replay_buffer_size = cfg.max_replay_buffer_size
             self._skills = np.zeros((max_replay_buffer_size, skill_dim))
-        # self._not_dones = np.zeros((max_replay_buffer_size, 1))
             self._not_dones_no_max = np.zeros((max_replay_buffer_size, 1))
-  
+            # self._pureSkills = np.zeros((max_replay_buffer_size, skill_dim))
+        self.pureSkills = np.zeros((cfg.max_replay_buffer_size, skill_dim))
+
         
         # print(f"Algorithm received is: {self.alg}")
         """
@@ -112,7 +113,8 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
     def add_sample(self, observation, action, reward, terminal, next_observation, **kwargs):
         raise NotImplementedError("Only use add_path")
 
-    def add_single_sample(self, latent, observation, action, reward, next_observation, terminal=None, skill=None, **kwargs):
+    def add_single_sample(self, latent, observation, action, reward, next_observation, terminal=None, pureSkill=None, **kwargs):
+        print(f"Pure skill received is: {pureSkill}")
         if isinstance(self._action_space, Discrete):
             action = np.eye(self._action_space.n)[action]
         if self.alg == "DIAYN":
@@ -120,16 +122,20 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                 latent = latent.cpu().detach().numpy()
             reward = reward.cpu().detach().numpy()
             # print(f"Latent received is : {latent}, the type is : {type(latent)}")
-            
+            self._next_obs[self._top] = next_observation
+
             self._skills[self._top] = latent
-        self._observations[self._top] = observation
-        self._actions[self._top] = action
-        if self.alg == "SAC":
+            self.pureSkills[self._top] = pureSkill
+            self._observations[self._top] = observation
+            self._actions[self._top] = action
+        elif self.alg == "SAC":
             self._latents[self._top] = latent
             self._terminals[self._top] = terminal
             self._rewards[self._top] = reward
+            self._observations[self._top] = observation
+            self._actions[self._top] = action
+            self._next_obs[self._top] = next_observation
 
-        self._next_obs[self._top] = next_observation
         self._advance()
 
     
@@ -307,8 +313,8 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             )
 
         self.terminate_episode()
-
-    def add_path_fixed_latent(self, path, rewards, latent, skill=None):
+    
+    def add_path_fixed_latent(self, path, rewards, latent, originalSkill=None):
         if self.alg == "SAC":
             for i, (
                 obs,
@@ -355,6 +361,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                     action,
                     reward,
                     next_obs,
+                    pureSkill = originalSkill
                 )
 
 
@@ -399,9 +406,12 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                     latents, rewards = self.relabeler.approx_irl_relabeling(paths)
                 elif self.alg == "DIAYN":
                     skills, rewards = self.relabeler.approx_irl_relabeling(paths)
-
+                    print(f"The skill received after IRL relabeleing is: {skills}")
             else:
                 raise RuntimeError
+
+
+            
 
             if self.alg == "SAC":
                 self.relabeled_latents.extend(latents)
@@ -416,11 +426,14 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             elif self.alg == "DIAYN":
 
                 """
-                    THESE SKILLS, COME FROM THE 
+                    THESE SKILLS, COME FROM THE APPROX IRL FUNC in rewards.py
 
                 """
                 self.relabeled_latents.extend(skills)
+                print(f"The relabeled latents arE: {self.relabeled_latents}")
+                
                 orig_skills = [[path['skills'][0]] for path in paths]
+                print(f"The original skills are:{orig_skills}")
                 orig_rewards = [[self.relabeler.calculate_path_reward(path, z[0], True)] for path, z in zip(paths, orig_skills)]
                 assert len(skills) == len(rewards)
                 assert len(orig_skills) == len(orig_rewards)
@@ -436,7 +449,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                     skills[i].extend(orig_skills[i])
                     rewards[i].extend(orig_rewards[i])
 
-
+            print(f"Skills after extend: {skills}")
             if self.plot and isinstance(self.relabeler, PointMassBestRandomRelabeler):
                 self.relabeler.plot_paths(paths, orig_latents, latents, title='Epoch {}'.format(str(self.epoch)))
                 self.trajectory_latents = None
@@ -450,7 +463,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                     original_z = path['latents'][0]
                 elif self.alg == "DIAYN":
                     original_z = path['skills'][0]
-
+                    print(f"Original Z is: {original_z}")
                 original_discounted_reward = self.relabeler.get_discounted_reward(rewards[i][-1])
                 
                 
@@ -503,6 +516,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             
             
             elif self.alg == "DIAYN":
+                print(f"Skill list is: {skills}")
                 for path, reward_list, skill_list in zip(paths, rewards, skills):
                     assert len(reward_list) == len(skill_list)
                     for r, z in zip(reward_list, skill_list):
@@ -515,8 +529,9 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                             IT ADDS THE NEW SKILLS AND THE REWARDS TO THE REPLAY BUFFER
 
                         """
-                        
-                        self.add_path_fixed_latent(path, r, z)
+                        print(f"Z added in the loop is: {z}")
+                        print(f"The original skill is: {original_z}")
+                        self.add_path_fixed_latent(path, r, z, originalSkill=original_z)
 
 
 
@@ -543,6 +558,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
 
 
     def random_batch(self, batch_size):
+        print(f"The self size is in the replay buffer: {self._size}, the batch size is: {batch_size}")
         indices = np.random.randint(0, self._size, batch_size)
         if self.dads:
             return dict(
@@ -569,16 +585,17 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             elif self.alg == "DIAYN":
                 return dict(
                 # observations=np.concatenate([self._observations[indices], self._latents[indices]], axis=1),
-                observations=self._observations[indices],
-                actions=self._actions[indices],
-                rewards=self._rewards[indices],
-                terminals=self._terminals[indices],
-                next_observations=self._next_obs[indices],
-                # next_observations=np.concatenate([self._next_obs[indices], self._latents[indices]], axis=1),
-                latents=self._latents[indices],
-                skill = self._skills[indices],
-                # not_done = self._not_dones[indices],
-                not_dones_no_max = self._not_dones_no_max[indices]
+                    observations=self._observations[indices],
+                    actions=self._actions[indices],
+                    rewards=self._rewards[indices],
+                    terminals=self._terminals[indices],
+                    next_observations=self._next_obs[indices],
+                    # next_observations=np.concatenate([self._next_obs[indices], self._latents[indices]], axis=1),
+                    latents=self._latents[indices],
+                    skill = self._skills[indices],
+                    # not_done = self._not_dones[indices],
+                    not_dones_no_max = self._not_dones_no_max[indices],
+                    pureSkill=self.pureSkills[indices]
                 )   
 
     def handle_permuting(self):

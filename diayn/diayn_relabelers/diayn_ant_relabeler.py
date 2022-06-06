@@ -47,6 +47,8 @@ class DIAYNAntDirectionRelabelerNewSparse(AntDirectionRelabelerNew):
         if not currentSkill:
             rewards = self.agent.compute_diversity_reward(path["skills"], path["next_observations"])
         else:
+            print(f"I am in the correct case from get_path_Reward for the latent: {latent}")
+            print(f"The path in calcualte Path reward of the DiaynAntRelabeler is: {path}")
             # print(f"CURRENT LATENT IN CALC PATH REWARD: {latent}")
             rewards = self.agent.compute_diversity_reward(latent, path["next_observations"], True)
         return rewards
@@ -55,6 +57,9 @@ class DIAYNAntDirectionRelabelerNewSparse(AntDirectionRelabelerNew):
         return np.zeros([len(path), 1])
 
     def get_reward_matrix(self, paths, latents):
+        print("I am inside the DIAYNAntDirectionRelabelerSparse Reward Matrix")
+        print(f"Length of paths in get_reward_matrix: {len(paths)}")
+        print(f"Latents received in get_Reward_matrix: {latents}")
         return np.array([[self.get_discounted_path_reward(path, latent) for latent in latents] for path in paths])
 
 
