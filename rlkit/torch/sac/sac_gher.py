@@ -92,6 +92,10 @@ class SACTrainer(TorchTrainer):
         # obs = torch.cat([obs, latents], dim=1)
         # next_obs = torch.cat([next_obs, latents], dim=1)
 
+        print(f"VALUES IN SAC_GHER")
+        print(f"Rewards: {rewards},  latents: {latents}")
+        print(f"Shape of rewards: {rewards.shape}. obs shape: {obs.shape}, latents: {latents.shape}")
+
         """
         Policy and Alpha Loss
         """

@@ -38,7 +38,6 @@ class MdpPathCollector(PathCollector):
     ):
         paths = []
         num_steps_collected = 0
-        print(f"NUM steps is: {num_steps}")
         while num_steps_collected < num_steps:
             max_path_length_this_loop = min(  # Do not go over num_steps
                 max_path_length,
@@ -198,10 +197,12 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
             calculate_r_d=True,
             hide_latent=False,
             normalize_performance=False,
-            save_videos=False
+            save_videos=False,
+            cfg = None 
     ):
         if render_kwargs is None:
             render_kwargs = {}
+       
         self._env = env
         self._policy = policy
         self._relabeler = relabeler
@@ -217,7 +218,7 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
         self._num_paths_total = 0
         self._epoch = 0
         self.agent = agent
-
+        self.cfg = cfg
         # for video saving
         self.save_video = save_videos and not self.is_eval and hasattr(relabeler, 'to_save_video')
 
@@ -231,6 +232,7 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
             max_path_length,
             num_steps,
             discard_incomplete_paths,
+            rollType,
     ):
         paths = []
         num_steps_collected = 0
@@ -249,27 +251,31 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
         #     num_steps = int(num_steps)
 
         num_steps = 1000
-        # print(f"Type of num_steps_collected: {type(num_steps_collected)}, num_steps: {type(num_steps)}")
-        print(f"NUM steps is: {num_steps}")
 
+        #1000 PATHS, with each trajectory of 1000 steps.
+        # print(f"Type of num_steps_collected: {type(num_steps_collected)}, num_steps: {type(num_steps)}")
+        # print(f"NUM steps is: {num_steps}")
+        # print(f"I am in DIAYNTaskConditionedPathCollector")
         while num_steps_collected < num_steps:
             max_path_length_this_loop = min(  # Do not go over num_steps
                 max_path_length,
                 num_steps - num_steps_collected,
             )
-            print(f"Max path length is: {max_path_length}")
-            print(f"Num steps: {num_steps}, difference is: {num_steps - num_steps_collected}")
-            print(f"Max path length with this loop is: {max_path_length_this_loop}")
+            # print(f"Max path length is: {max_path_length}")
+            # print(f"Num steps: {num_steps}, difference is: {num_steps - num_steps_collected}")
+            # print(f"Max path length with this loop is: {max_path_length_this_loop}")
             path = diayn_multitask_rollout_with_relabeler(
                 self._env,
                 self.agent,
                 self._relabeler,
+                rollType=rollType,
                 max_path_length=max_path_length_this_loop,
                 render=render,
                 render_kwargs=render_kwargs,
                 return_dict_obs=False,
                 calculate_r_d=self.calculate_r_d,
-                hide_latent=self.hide_latent
+                hide_latent=self.hide_latent,
+                cfg = self.cfg
             )
             # print(f"Path keys in collect paths is : {path.keys()}")
             path_len = len(path['actions'])
@@ -279,6 +285,8 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
                     and discard_incomplete_paths
             ):
                 break
+
+            # print(f"Path_len in DIAYN-HUSK: {path_len}")
             num_steps_collected += path_len
             paths.append(path)
         self._num_paths_total += len(paths)
@@ -287,6 +295,7 @@ class DIAYNTaskConditionedPathCollector(PathCollector):
             for path in paths:
                 path['normalized_rewards'] = self._relabeler.get_normalized_path_rewards(path)
         self._epoch_paths.extend(paths)
+        print(f"The len of paths: {len(paths)}")
         return paths
 
     def get_epoch_paths(self):
@@ -371,6 +380,8 @@ class TaskConditionedPathCollector(PathCollector):
         paths = []
         num_steps_collected = 0
 
+        print(f"Num steps in rollouts are: {num_steps}")
+
         if self.save_video and self._relabeler.to_save_video(self._epoch):
             render = True
             render_kwargs = dict(mode='rgb_array')
@@ -378,12 +389,13 @@ class TaskConditionedPathCollector(PathCollector):
             render = self._render
             render_kwargs = self._render_kwargs
 
-        # print(f"NUM_STEPS IN GHER IS: {num_steps}")
+        print(f"NUM_STEPS IN GHER PATH COLLECTOR IS: {num_steps}")
         while num_steps_collected < num_steps:
             max_path_length_this_loop = min(  # Do not go over num_steps
                 max_path_length,
                 num_steps - num_steps_collected,
             )
+            print(f"Max path len in loop: {max_path_length_this_loop}")
             path = multitask_rollout_with_relabeler(
                 self._env,
                 self._policy,
@@ -396,6 +408,8 @@ class TaskConditionedPathCollector(PathCollector):
                 hide_latent=self.hide_latent
             )
             path_len = len(path['actions'])
+
+            print(f"Path_len in GHER: {path_len}")
             if (
                     path_len != max_path_length
                     and not path['terminals'][-1]
@@ -403,6 +417,7 @@ class TaskConditionedPathCollector(PathCollector):
             ):
                 break
             num_steps_collected += path_len
+
             paths.append(path)
         self._num_paths_total += len(paths)
         self._num_steps_total += num_steps_collected
@@ -410,6 +425,9 @@ class TaskConditionedPathCollector(PathCollector):
             for path in paths:
                 path['normalized_rewards'] = self._relabeler.get_normalized_path_rewards(path)
         self._epoch_paths.extend(paths)
+
+        print(f"Len of paths in TaskConditionedPathCollector: {len(paths)}")
+
         return paths
 
     def get_epoch_paths(self):

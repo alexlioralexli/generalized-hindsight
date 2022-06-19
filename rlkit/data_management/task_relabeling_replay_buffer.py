@@ -38,7 +38,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             self._skills = np.zeros((max_replay_buffer_size, skill_dim))
             self._not_dones_no_max = np.zeros((max_replay_buffer_size, 1))
             # self._pureSkills = np.zeros((max_replay_buffer_size, skill_dim))
-        self.pureSkills = np.zeros((cfg.max_replay_buffer_size, skill_dim))
+            self.pureSkills = np.zeros((cfg.max_replay_buffer_size, skill_dim))
 
         
         # print(f"Algorithm received is: {self.alg}")
@@ -94,7 +94,12 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         if plot:
             self.trajectory_latents = []
         self.approx_irl = approx_irl
+
         self.cem = cem
+        if self.cem:
+            # Set the rho, k, n
+            self.rho, self.k, self.n = None, None, None
+        
         self._top = 0
         self._size = 0
         self.all_relabeling_info = dict()
@@ -114,7 +119,9 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         raise NotImplementedError("Only use add_path")
 
     def add_single_sample(self, latent, observation, action, reward, next_observation, terminal=None, pureSkill=None, **kwargs):
-        print(f"Pure skill received is: {pureSkill}")
+        #RECEIVES SINGLE ELEMENTS OF EACH. NOT 2D ARRAYS.
+        # print(f"Obs in single sample is: {observation}")
+        # print(f"Next_obs in single sample is: {next_observation}")
         if isinstance(self._action_space, Discrete):
             action = np.eye(self._action_space.n)[action]
         if self.alg == "DIAYN":
@@ -123,7 +130,6 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             reward = reward.cpu().detach().numpy()
             # print(f"Latent received is : {latent}, the type is : {type(latent)}")
             self._next_obs[self._top] = next_observation
-
             self._skills[self._top] = latent
             self.pureSkills[self._top] = pureSkill
             self._observations[self._top] = observation
@@ -174,6 +180,10 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                 terminals=self._terminals[indices],
                 next_observations=self._next_obs[indices],
             )
+
+
+
+    # THIS ADD PATH IS JUST TO ADD RANDOM RELABELING.
     def add_path(self, path):
         # add with original z and resampled z
         original_z = path["latents"][0]
@@ -196,13 +206,15 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
         
         if self.add_random_relabeling:
 
-            if self.alg == "SAC":
-                random_z = self.relabeler.sample_task()
-
+            
+            random_z = self.relabeler.sample_task()
+            # print(f"Random_Z sampeled is: {random_z}")
             resampled_zs.append(random_z)
             
-
-            reward_list.append(self.relabeler.calculate_path_reward(path, random_z))
+            if self.alg == "DIAYN":
+                reward_list.append(self.relabeler.calculate_path_reward(path, random_z, True))
+            elif self.alg == "SAC":
+                reward_list.append(self.relabeler.calculate_path_reward(path, random_z))
 
         # save video if applicable, definitely save
         original_discounted_reward = self.relabeler.get_discounted_reward(reward_list[-1])
@@ -240,7 +252,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                     path["agent_infos"],
                 )):
                     self.add_single_sample(
-                        latent,
+                        z,
                         obs,
                         action,
                         reward,
@@ -270,13 +282,12 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                         
                     )):
                         self.add_single_sample(
-                            latent,
+                            z,
                             obs,
                             action,
                             reward,
-                            terminal,
                             next_obs,
-                            done
+                            pureSkill = original_z
                             # skills, 
                         )
 
@@ -331,13 +342,15 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                 path["terminals"],
                 path["agent_infos"],
             )):
+                # self, latent, observation, action, reward, next_observation, terminal=None,
+                # print(f"In add latent: obs: {obs}, next_obs: {next_obs}")
                 self.add_single_sample(
-                    latent,
-                    obs,
-                    action,
-                    reward,
-                    terminal,
-                    next_obs,
+                    latent = latent,
+                    observation = obs,
+                    action = action,
+                    reward = reward,
+                    next_observation = next_obs,
+                    terminal = terminal
 
                 )
 
@@ -371,12 +384,13 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
 
 
     def add_paths(self, paths, epoch):
-        print(f"The paths received for epoch: {epoch}, are: {paths}")
+        print(f"Length of paths IN GHER are: {len(paths)}")
+        # print(f"The paths received for epoch: {epoch}, are: {paths}")
         if self.dads:
             for path in paths:
                 self.add_dads_path(path)
-        elif self.normalize_rewards or self.approx_irl:
-            print("I am in approx_irl")
+        elif self.normalize_rewards or self.approx_irl or self.cem:
+            # print("I am in approx_irl")
             assert not self.hide_latent
             if self.normalize_rewards:
                 # sample a bunch of latents
@@ -384,11 +398,13 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                 # take each of them and normalize
                 # label based on the best normalized
                 if self.alg == "SAC":
+
                     latents, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
+                    print(f"Len of latents are: {latents}")
                 elif self.alg == "DIAYN":
                     skills, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
 
-            elif self.approx_irl:
+            elif self.approx_irl or self.cem:
                 """
                     ALGORITHM: 
 
@@ -402,11 +418,21 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
 
 
                 """
-                if self.alg == "SAC":
-                    latents, rewards = self.relabeler.approx_irl_relabeling(paths)
-                elif self.alg == "DIAYN":
-                    skills, rewards = self.relabeler.approx_irl_relabeling(paths)
-                    print(f"The skill received after IRL relabeleing is: {skills}")
+                if self.cem:
+                    if self.alg == "SAC":
+                        latents, rewards = self.relabeler.cem_relabeler(paths)
+                        print(f"Latents receievd after CEM relabeling are: {latents}, its length is : {len(latents)}")
+                    elif self.alg == "DIAYN":
+                        print(f"I am in CEM, DIAYN")
+                        skills, rewards = self.relabeler.cem_relabeler(paths)
+                        print(f"The skill received after CEM relabeleing is: {skills}")
+                elif self.approx_irl:
+                    if self.alg == "SAC":
+                        latents, rewards = self.relabeler.approx_irl_relabeling(paths)
+                        print(f"Latents receievd after IRL relabeling are: {latents}, its length is : {len(latents)}")
+                    elif self.alg == "DIAYN":
+                        skills, rewards = self.relabeler.approx_irl_relabeling(paths)
+                        print(f"The skill received after IRL relabeleing is: {skills}")
             else:
                 raise RuntimeError
 
@@ -414,9 +440,12 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             
 
             if self.alg == "SAC":
+                print(f"Len of paths in GHER is: {len(paths)}")
                 self.relabeled_latents.extend(latents)
                 orig_latents = [[path['latents'][0]] for path in paths]
+
                 orig_rewards = [[self.relabeler.calculate_path_reward(path, z[0])] for path, z in zip(paths, orig_latents)]
+                # print(f"Original Latents were: {orig_latents}")
                 assert len(latents) == len(rewards)
                 assert len(orig_latents) == len(orig_rewards)
                 assert len(latents) == len(orig_latents)
@@ -430,10 +459,10 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
 
                 """
                 self.relabeled_latents.extend(skills)
-                print(f"The relabeled latents arE: {self.relabeled_latents}")
+                # print(f"The relabeled latents arE: {self.relabeled_latents}")
                 
                 orig_skills = [[path['skills'][0]] for path in paths]
-                print(f"The original skills are:{orig_skills}")
+                # print(f"The original skills are:{orig_skills}")
                 orig_rewards = [[self.relabeler.calculate_path_reward(path, z[0], True)] for path, z in zip(paths, orig_skills)]
                 assert len(skills) == len(rewards)
                 assert len(orig_skills) == len(orig_rewards)
@@ -449,7 +478,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                     skills[i].extend(orig_skills[i])
                     rewards[i].extend(orig_rewards[i])
 
-            print(f"Skills after extend: {skills}")
+            # print(f"Skills after extend: {skills}")
             if self.plot and isinstance(self.relabeler, PointMassBestRandomRelabeler):
                 self.relabeler.plot_paths(paths, orig_latents, latents, title='Epoch {}'.format(str(self.epoch)))
                 self.trajectory_latents = None
@@ -461,9 +490,10 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             for i, path in enumerate(paths):
                 if self.alg == "SAC":
                     original_z = path['latents'][0]
+                    # print(f"Original Z was: {original_z}")
                 elif self.alg == "DIAYN":
                     original_z = path['skills'][0]
-                    print(f"Original Z is: {original_z}")
+                    # print(f"Original Z is: {original_z}")
                 original_discounted_reward = self.relabeler.get_discounted_reward(rewards[i][-1])
                 
                 
@@ -517,6 +547,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             
             elif self.alg == "DIAYN":
                 print(f"Skill list is: {skills}")
+                random_z = None
                 for path, reward_list, skill_list in zip(paths, rewards, skills):
                     assert len(reward_list) == len(skill_list)
                     for r, z in zip(reward_list, skill_list):
@@ -529,8 +560,8 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                             IT ADDS THE NEW SKILLS AND THE REWARDS TO THE REPLAY BUFFER
 
                         """
-                        print(f"Z added in the loop is: {z}")
-                        print(f"The original skill is: {original_z}")
+                        # print(f"Z added in the loop is: {z}")
+                        # print(f"The original skill is: {original_z}")
                         self.add_path_fixed_latent(path, r, z, originalSkill=original_z)
 
 
@@ -544,10 +575,13 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                         """
 
                         random_z = self.relabeler.sample_task()
+                        print(f"Random Z relabeled is: {random_z}")
                         random_r = self.relabeler.calculate_path_reward(path, random_z, True)
                         self.add_path_fixed_latent(path, random_r, random_z)
                     if self.permute_relabeling:
                         self.permutation_list.append((path,z))
+       
+
         else:
             if self.relabeler.sliding_normalization:
                 self.relabeler.update_sliding_params(paths)
@@ -558,7 +592,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
 
 
     def random_batch(self, batch_size):
-        print(f"The self size is in the replay buffer: {self._size}, the batch size is: {batch_size}")
+        # print(f"The self size is in the replay buffer: {self._size}, the batch size is: {batch_size}")
         indices = np.random.randint(0, self._size, batch_size)
         if self.dads:
             return dict(

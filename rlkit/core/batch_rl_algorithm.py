@@ -1,4 +1,6 @@
+import os
 import abc
+import torch 
 
 import gtimer as gt
 from rlkit.core.rl_algorithm import BaseRLAlgorithm
@@ -34,6 +36,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             replay_buffer,
             log_exploration
         )
+        self.agent = agent
         self.cfg = cfg 
         self.batch_size = batch_size
         self.max_path_length = max_path_length
@@ -43,7 +46,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
         self.num_train_loops_per_epoch = num_train_loops_per_epoch
         self.num_expl_steps_per_train_loop = num_expl_steps_per_train_loop
         self.min_num_steps_before_training = min_num_steps_before_training
-    
+        self.work_dir = os.getcwd()
     def _train(self):
 
         """
@@ -58,12 +61,15 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             WITHIN ROLLOUTS:
             path_length < max_path_length
 
-        """
+        """ 
+        self.recordEpoch = [10, 100, 500, 1000, 2500, 5000, 10000]
+        # print(f"min num steps before training: {self.min_num_steps_before_training}")
         if self.min_num_steps_before_training > 0:
             init_expl_paths = self.expl_data_collector.collect_new_paths(
                 self.max_path_length,
                 self.min_num_steps_before_training,
                 discard_incomplete_paths=False,
+                rollType="exploration", 
             )
             # print(f"KEYS OF ORIGINAL init paths are: {len(init_expl_paths)}")
             # print(f"the first index is a : {type(init_expl_paths)}")
@@ -76,11 +82,11 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             """
 
 
-            # self.replay_buffer.add_paths(init_expl_paths, epoch_dummy)
+            self.replay_buffer.add_paths(init_expl_paths, epoch_dummy)
             self.expl_data_collector.end_epoch(-1)
 
         # REMOVING 1 EPOCH, REMOVE THIS LINE LATER.
-        self.num_epochs -= 1
+        # self.num_epochs -= 1
         for epoch in gt.timed_for(
                 range(self._start_epoch, self.num_epochs),
                 save_itrs=True,
@@ -95,17 +101,22 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 self.max_path_length,
                 self.num_eval_steps_per_epoch,
                 discard_incomplete_paths=True,
+                rollType="evaluation",
             )
             gt.stamp('evaluation sampling')
 
             for _ in range(self.num_train_loops_per_epoch):
+
+
+                # THIS SHOULD BE A 1000.
                 new_expl_paths = self.expl_data_collector.collect_new_paths(
                     self.max_path_length,
                     self.num_expl_steps_per_train_loop,
                     discard_incomplete_paths=False,
+                    rollType="exploration",
                 )
-                print(f"MAX PATH LENGTH IN BATCH RL is : {self.max_path_length}")
-                gt.stamp('exploration sampling', unique=False)
+                # print(f"MAX PATH LENGTH IN BATCH RL is : {self.max_path_length}")
+                # gt.stamp('exploration sampling', unique=False)
                 print(f"IN epoch NUMBER: {epoch}")
 
                 #THE ADD_PATHS, should return the new data points in the replay_buffer, : skills, not_done, not_done_no_max.
@@ -122,7 +133,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 """
 
         
-              
+                print(f"Len of expl paths in DIAYN-HUSK: {len(new_expl_paths)}")
                 self.replay_buffer.add_paths(new_expl_paths, epoch)
 
                 """
@@ -141,7 +152,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 #THERE IS AN EPOCH
                 for step in range(self.num_trains_per_train_loop):
 
-                    print(f"Num trains per loop is: {self.num_trains_per_train_loop}")
+                    #print(f"Num trains per loop is: {self.num_trains_per_train_loop}")
                     """
                         RANDOM BATCH -> REPLAY BUFFER -> RANDOM_BATCH
 
@@ -150,12 +161,16 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                         self.batch_size)
                     
 
-                    print(f"The keys of train data is: {train_data.keys()}")
-                    sub_data = train_data["skill"]
-                    print(f"Len of train data is: {len(sub_data)}")
-                    print(f"The sub data is: {sub_data}")
+                    
+                    #print(f"The keys of train data is: {train_data.keys()}")
+                    # obs = train_data["observations"]
+                    # next_obs = train_data["next_observations"]
+                    # print(f"Shape of obs is: {obs.shape}")
+                    # print(f"The obs data is: {obs}")
+                    # print(f"Next_obs shape is: {next_obs.shape}")
+                    # print(f"The obs data is: {next_obs}")
                         # THE NETWORKS ARE UPDATED HERE. SO DIAYN WILL BE TIED UP HERE.
-                    self.trainer.train(train_data, step)
+                    self.trainer.train(train_data, step, epoch)
                 # if hasattr(self.trainer, '_base_trainer'):
                 #     self.trainer._base_trainer._update_target_networks()
                 # else:
@@ -164,9 +179,15 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 self.trainer.trainParamSet(False)
                 gt.stamp('training', unique=False)
                 # self.training_mode(False)
-
-
             self._end_epoch(epoch)
+        # Already taken care of in _end_epoch
+        #     if epoch in self.recordEpoch:
+        #         print(f"Pickling: {epoch}")
+        #         filePathSave = self.work_dir + "/" + str(epoch) + ".pkl"
+        #         torch.save(self.agent,filePathSave)    
+
+        # filePathSave = self.work_dir + "/finalModel.pkl"
+        # torch.save(self.agent,filePathSave)
 
 
 class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
@@ -213,7 +234,7 @@ class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 self.min_num_steps_before_training,
                 discard_incomplete_paths=False,
             )
-            self.replay_buffer.add_paths(init_expl_paths)
+            self.replay_buffer.add_paths(init_expl_paths, -1)
             self.expl_data_collector.end_epoch(-1)
 
         for epoch in gt.timed_for(
@@ -235,11 +256,11 @@ class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                     discard_incomplete_paths=False,
                 )
                 gt.stamp('exploration sampling', unique=False)
-
-                self.replay_buffer.add_paths(new_expl_paths)
+                print(f"Len of expl paths in GHER: {len(new_expl_paths)}")
+                self.replay_buffer.add_paths(new_expl_paths, epoch)
                 gt.stamp('data storing', unique=False)
-                if self.alg == "SAC":
-                    self.training_mode(True)
+                # if self.alg == "SAC":
+                #     self.training_mode(True)
                 # self.trainer.trainParamSet()
                 for _ in range(self.num_trains_per_train_loop):
                     train_data = self.replay_buffer.random_batch(
@@ -254,7 +275,7 @@ class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 # print("Reminder: changed the update target networks functionality")
                 gt.stamp('training', unique=False)
                 # self.trainer.trainParamSet(False)
-                if self.alg == "SAC":
-                    self.training_mode(False)
+                # if self.alg == "SAC":
+                #     self.training_mode(False)
 
             self._end_epoch(epoch)

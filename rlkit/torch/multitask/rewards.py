@@ -65,23 +65,25 @@ class Relabeler(object):
         raise NotImplementedError
 
     def get_discounted_reward(self, rewards):
-        print("I am inside get_discounted_reward in Relabeler")
+        # print("I am inside get_discounted_reward in Relabeler")
         if self.alg == "DIAYN":
             if not (isinstance(rewards, np.ndarray)):
                 rewards = rewards.cpu().detach().numpy()
                 rewards = np.asarray(rewards)
                 self.discount = 0.99
             reward_list = np.arange(len(rewards))
+            # print(f"Rewards are: {rewards}, rewards shape: {rewards.shape}")
             # print(f"Type Study: Type of self.discount : {type(self.discount)}, Type of reward_list: {type(reward_list)}, Type of data type: {reward_list.dtype}")
             multipliers = np.power(self.discount, np.arange(len(rewards)))
-            print(f"Multipliers in HUSK {multipliers}")
+            # print(f"Multipliers in HUSK {multipliers}")
             result = np.sum(rewards * multipliers)
 
-            print(f"The result calculated for HUSK: {result}")
+            # print(f"The result calculated for HUSK: {result}")
             return np.sum(rewards * multipliers)
         elif self.alg == "SAC":
             assert len(rewards.shape) == 1
             reward_list = np.arange(len(rewards))
+            
             multipliers = np.power(self.discount, np.arange(len(rewards)))
             print(f"Multipliers in GHER: {multipliers}")
             result = np.sum(rewards * multipliers)
@@ -89,15 +91,17 @@ class Relabeler(object):
             return np.sum(rewards * multipliers)
 
     def get_discounted_path_reward(self, path, latent):
-        print(f"I am inside get_discounted_path_reward in rewards.py inside Relabeler")
-        print(f"Path and latent received in get_discounted_path_reward: {path}, {latent}")
-        print(f"Latent received in get_discounted_path_Reward: {latent}")
+        # print(f"I am inside get_discounted_path_reward in rewards.py inside Relabeler")
+        # print(f"Path and latent received in get_discounted_path_reward: {path}, {latent}")
+        # print(f"Latent received in get_discounted_path_Reward: {latent}")
         if self.alg == "SAC":
             path_rewards = self.calculate_path_reward(path, latent)
             return self.get_discounted_reward(path_rewards)
         elif self.alg == "DIAYN":
-            latent_path = path["skills"]
+            # print(f"Path in discounted path reward is: {path}")
+            # latent_path = path["skills"]
             path_rewards = self.calculate_path_reward(path, latent, True)
+            # print(f"Reward calculated in GET DISCOUNTED PATH REWARD: {path_rewards}")
             return self.get_discounted_reward(path_rewards)
 
 
@@ -117,18 +121,19 @@ class Relabeler(object):
         return np.minimum(v1, v2)
 
     def get_both_values(self, obs, latents):
-        # print(f"Latents is : {type(latents)}, its shape is : {latents.shape}, print for latent : {latents}")
-        # print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
-        print(f"VALUES IN GET BOTH VALUES : {self.alg}")
+        # print(f" VALUES IN GET BOTH VALUES Latents is : {type(latents)}, its shape is : {latents.shape}, print for latent : {latents}")
+        # print(f"VALUES IN GET BOTH VALUES obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
+        # print(f"VALUES IN GET BOTH VALUES : {self.alg}")
         if self.alg == "SAC":
             obs, latent = ptu.from_numpy(obs).unsqueeze(0).repeat(len(latents), 1), ptu.from_numpy(latents)
             
-            print(f"obs in get both values in GHER: {obs}, latent : {latent}")
-            # print(f"AFTER RESHAPE")
-            # print(f"latent is : {type(latent)}, its shape is : {latent.shape}, print for latent : {latent}")
+            print(f"VALUES IN GET BOTH VALUES obs in get both values in GHER: {obs}, latent : {latent}")
+            print(f"AFTER RESHAPE")
+            print(f"VALUES IN GET BOTH VALUES latent is : {type(latent)}, its shape is : {latent.shape}, print for latent : {latent}")
             # print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
 
             actions = self.action_fn(obs, latent, deterministic=True)[0]
+            
             print(f"Actions in get both values in GHER : {actions}")
             # print(f"Actions from action_fn are as follows: {actions}")
             # print(f"THE RESULTS OF THE V1, V2 are: {self.q1(obs, actions, latent).shape} , {self.q1(obs, actions, latent).shape}")
@@ -144,8 +149,8 @@ class Relabeler(object):
             obs_tensor = torch.from_numpy(obs).type(torch.DoubleTensor).unsqueeze(0).repeat(len(latents), 1).to(device)
             action_list = []
             
-            print(f"skill tensor in HUSK : {skill_tensor}, the shape  of skill tensor is : {skill_tensor.shape}")
-            print(f"obs tensor in HUSK: {obs_tensor}, the shape of obs_tensor is : {obs_tensor.shape} ")
+            # print(f"skill tensor in HUSK : {skill_tensor}, the shape  of skill tensor is : {skill_tensor.shape}")
+            # print(f"obs tensor in HUSK: {obs_tensor}, the shape of obs_tensor is : {obs_tensor.shape} ")
             
             
             
@@ -154,7 +159,7 @@ class Relabeler(object):
                 action_pyList = action_np.tolist()
                 action_list.append(action_pyList)
             action_tensor = torch.DoubleTensor(action_list).to(device)
-            print(f"Action tensor in HUSK: {action_tensor}, the shape is : {action_tensor.shape}")
+            # print(f"Action tensor in HUSK: {action_tensor}, the shape is : {action_tensor.shape}")
             obs_action_skill = torch.cat([obs_tensor, action_tensor, skill_tensor], dim=-1).float().to(device)
             return ptu.get_numpy(self.agent.critic.Q1(obs_action_skill)), ptu.get_numpy(self.agent.critic.Q2(obs_action_skill))
 
@@ -186,6 +191,7 @@ class RandomRelabeler(Relabeler):
             else:
                 latents = [self.sample_task() for _ in range(self.n_sampled_latents - 1)]
                 latents.append(path['latents'][0])
+                print(f"Latents calculated in GHER are for: {latents}")
             rewards = [self.calculate_path_reward(path, latent) for latent in latents]
         elif self.alg == "DIAYN":
             if self.n_sampled_latents == 1:
@@ -275,30 +281,45 @@ class RandomRelabeler(Relabeler):
         # histogram of average rewards
         pass
 
-    def dist_values(self, fitness):
-        pass 
-    def calculate_fitness(self, skills, path):
-        pass 
-    def skill_distribution(self, mu, variance):
+    def get_best_skill(self, fitSkills):
+        return fitSkills[0]
+    def calculate_fitness(self, rho, new_skills, paths):
         """
-              if self.skill_type == 'discrete':
-            # If the skill type is discrete, the shape of the skill gives us 
-            # the number of different skills
-            self.skill_dist = torch.distributions.OneHotCategorical(
-                probs=torch.ones(self.skill_dim).to(self.device))
-        else:
-            # The skills are a contunious hypercube where every axis is 
-            # between zero and one
-            self.skill_dist = torch.distributions.Uniform(low=torch.zeros(self.skill_dim).to(self.device), 
-                                                          high=torch.ones(self.skill_dim).to(self.device))
-        self.discriminator_update_frequency = discriminator_update_frequency
+            1. How do we collect the reward? Env or Diversity Reward?
+            2. How do we sample the action? 
+            3. Instead of get_cem_reward, how will you 
+                You normal reward_matrix, YOU PASS ALL PATHS.
+                PATHS, in HUSK is a collection of DIFFERENT SKILLS.
+
 
         """
+        # Find the rewards
+        print(f"New skills are: {new_skills}")
+        reward_list = [self.calculate_path_reward(path, latent, True) for latent in new_skills]
+        original_z = path['skill'][0]
+        import math
+        rho_filter = math.floor(len(ranks) * rho)
+        best_skills = new_skills.argsort()[-rho_filter:][::-1]
+        
+        # SELECT RHO
 
-        pass 
+        # SELECT TOP RHO:
 
+        """ 
+            import numpy as np
+            import math
+            rho_filter = math.floor(len(ranks) * 0.1)
+            best_skill.argsort()[-rho_filter:][::-1]
 
-    def cem_relabeler(self, paths, rho=0.1, k=5,n=100):
+        """
+
+    def skill_distribution(self, mu, std):
+        # This can be a new SKILL DISTRIBUTION OBJECT. It doesn't need to be the agent's
+        # Since, it will sample from Normal, so it doesn't matter.c
+        resultant = torch.empty(self.skill_dim).normal_(mean=mu,std=std) 
+        return resultant
+
+    def cem_relabeler(self, path, rho=0.1, k=5,n=100):
         """
             *NOTES:
 
@@ -310,12 +331,14 @@ class RandomRelabeler(Relabeler):
             INPUT = paths, rho, n, k
             mean, variance
             run for k generations:
+                # WILL THESE BE COMPLETELY NEW SKILLS? What about the ones sampled in last?
                 skills <- generate_skills from mu, rho
                 fitness <- 
                     use next_obs from ORIGINAL path
                     USE ORIGINAL ACTION SKILL ALWAYS 
-                    find REWARD with SKILL, OBS, ACTION
+                    find REWARD with THE SAMPLED SKILL RIGHT? OBS, ACTION
                 reduce (from 100 by Rho)
+                # WHAT DO I DO WITH THESE REDUCED SKILLS?
                 Adjust mu, variance from reduce (rho)
 
             
@@ -326,23 +349,44 @@ class RandomRelabeler(Relabeler):
         
         mu = 0
         variance = 100 # * I Identity Matrix 
-
+        std = 10
         # Random Sampling uses mu and variance
         """
             100
 
         """
-        for _ in range(k):
-            original_skill = path[0]["skill"]
-            new_skills = [self.skill_distribution(mu, variance) for _ in n-1]
-            fitness = calculate_fitness(new_skills, path)
-            mu, variance = dist_values(fitness)
-            pass 
-        pass 
+        # K-Generations
+        best_skills_for_path = []
+        original_skill = path["skill"][0]
+        for _ in range(k+1):
+            # Skill distribution is Normal. Original is Uniform. 
+            # For Continous 
+            new_skills = [self.skill_distribution(mu, std) for _ in range(n-1)]
+            #Fitness: From DIAYN or Env?
+            # Is discounted reward okay?
+            fitness = self.calculate_fitness(rho, new_skills, path)
+            mu, variance, std = torch.mean(fitness), torch.var(fitness), torch.std(fitness)
+        print(f"The final fitness in generation: {fitness}")
+        
+        """
+            In the end is there one best skill, or again the rho? 
+
+        """
+        
+        best_skill = get_best_skill(fitness)
+        best_skills_for_path.append(best_skill)
+        best_skills_for_path.append(orig_skill)
+        if self.alg == "DIAYN":
+            # print(f"I am inside DIAYN, the best_latents are: {best_latents}")
+            return [[z] for z in best_skills_for_path], \
+            [[self.calculate_path_reward(path, latent, True)] for path, latent in zip(paths, best_skills_for_path)]
+        elif self.alg == "SAC":
+            return [[z] for z in best_skills_for_path], \
+                    [[self.calculate_path_reward(path, latent)] for path, latent in zip(paths, best_skills_for_path)]
     def approx_irl_relabeling(self, paths):
         # print(f"Self.relabel is : {self.relabel}")
         print("In approx IRL relabeling")
-        print(f"Paths received are: {paths}")
+        # print(f"Paths received are: {paths}")
         print(f"Len of paths is: {len(paths)}")
         device = torch.device("cuda")
         """
@@ -367,11 +411,11 @@ class RandomRelabeler(Relabeler):
                 latents = [self.sample_task()]
             else:
                 latents = [self.sample_task() for _ in range(self.n_sampled_latents - len(paths))]
-            print(f"Latents calculated in GHER are: {latents}")
             # print(f"LATENTS, before path : {latents}, the shape is: {len(latents)}")
             for path in paths:
                 latents.append(path['latents'][0])
-
+            
+            print(f"Latents calculated are: {latents}")
         # print(f"LATENTS, after path : {latents}the shape is: {len(latents)}")
         elif self.alg == "DIAYN":
 
@@ -385,21 +429,24 @@ class RandomRelabeler(Relabeler):
                 latents = self.agent.skill_dist.sample()
             #skills = [utils.to_np(self.agent.skill_dist.sample())]
             else:
-                latents = [self.agent.skill_dist.sample() for _ in range(self.skill_dim-1)]
+                latents = [self.agent.skill_dist.sample() for _ in range(self.skill_dim*2)]
                 print(f"Latents calculated are: {latents}")
             
             for path in paths:
                 latents.append(path['skills'][0])
 
-            print(f"Latents after append is: {latents}")
+            # print(f"Latents after append is: {latents}")
         # latents = [np.concatenate([latent, np.array([np.pi, 0.25])]) for latent in x]
         # form matrix with |paths| rows x |latents| cols
+        
+        
         if self.cache:
             print(f"I am in cache")
             #new_paths = remove_extra_trajectory_info(paths)
             self.cached_paths = (paths + self.cached_paths)[:500]
             reward_matrix = self.get_reward_matrix(self.cached_paths, latents)
         else:
+            print(f"I am not in cache")
             reward_matrix = self.get_reward_matrix(paths, latents)
         '''
         array([[ 6,  0,  3],
@@ -412,14 +459,19 @@ class RandomRelabeler(Relabeler):
 
         # strategy with percentiles
         temp = reward_matrix.T.argsort()
+        # print(f"Temp in :{temp}")
         ranks = np.empty_like(temp)
+        # print(f"Ranks are: {ranks}")
+        # print(f"Len of temps is: {len(temp)}")
         for i in range(len(temp)):
             ranks[i, temp[i]] = np.arange(len(temp[i]))
         ranks = ranks.T
+        # print(f"Ranks Transpose is: {ranks}")
         if self.n_to_take == 1:
             for i, path in enumerate(paths):
                 # best_latent_index = np.argmax(ranks[i])
                 winners = np.argwhere(ranks[i] == np.amax(ranks[i]))
+                # print(f"Winners are: {winners}")
                 if len(winners) == 1:
                     best_latent_index = winners[0]
                     best_latents.append(latents[int(best_latent_index)])
@@ -430,8 +482,12 @@ class RandomRelabeler(Relabeler):
                             IF USE ADVANTAGES
 
                         """
+                        # print(f"I AM IN USE ADVANTAGES")
                         baselines = self.get_baseline_estimates(path['observations'][0], np.array([latents[int(winner)] for winner in winners])).flatten()
+                        # print(f"The baselines are: {baselines}, baselines shape: {baselines.shape}")
                         advantages = winnner_traj_rewards.flatten() - baselines
+
+                        # print(f"Advantages are: {advantages}, their shapes are: {advantages.shape}")
                         best_latent_index = winners[np.argmax(advantages)]
                     else:  # break ties by traj reward
                         print(f"I am in the no use advantage")
@@ -440,7 +496,7 @@ class RandomRelabeler(Relabeler):
                     best_latents.append(latents[int(best_latent_index)])
             if self.alg == "DIAYN":
 
-                    print(f"I am inside DIAYN, the best_latents are: {best_latents}")
+                    # print(f"I am inside DIAYN, the best_latents are: {best_latents}")
 
                     return [[z] for z in best_latents], \
                    [[self.calculate_path_reward(path, latent, True)] for path, latent in zip(paths, best_latents)]
