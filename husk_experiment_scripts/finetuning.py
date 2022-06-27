@@ -70,8 +70,8 @@ class Workspace(object):
         # print(f"The replay buffer env shape self.env.observation_space.shape : {self.env.observation_space.shape}")
         # print(f"Replay buffer capacity: {cfg.replay_buffer_capacity}")
     
-        self.sac_agent = hydra.utils.instantiate(cfg.agent)
-        self.diayn_agent = torch.load(self.args.file)
+        self.diayn_agent_new = hydra.utils.instantiate(cfg.agent)
+        self.diayn_agent_old = torch.load(self.args.file)
 
         # TODO(Mahi): Set up the discriminator here
 
@@ -129,12 +129,12 @@ class Workspace(object):
         best_skill = self.get_best_skill(self.agent, env, self.cfg.skill, cfg.max_path_length)
         
 
-        self.sac_agent.set_actor(self.diayn_agent.actor)
+        self.diayn_agent_new.set_actor(self.diayn_agent_old.actor)
         # QF, VF
         
         if self.cfg.pre_trained:
             # Use the same critics
-            self.sac_agent.reset_critic_reset(self.diayn_agent.critic, self.diayn_agent.critic_target)
+            self.diayn_agent_new.reset_critic_reset(self.diayn_agent_old.critic, self.diayn_agent_old.critic_target)
 
         else:
             # Use new critics
@@ -170,7 +170,7 @@ class Workspace(object):
                 # TODO(Mahi): Sample a skill here.
 
                 #SAMPLE SKILL
-                skill = utils.to_np(self.self.sac_agent.skill_dist.sample())
+                skill = utils.to_np(self.self.diayn_agent_new.skill_dist.sample())
                 print(f"Skill found is : {skill}")
                 self.logger.log('train/episode', episode, self.step)
 
@@ -181,7 +181,7 @@ class Workspace(object):
             else:
                 with utils.eval_mode(self.agent):
                     # print(f"Shape of skill before in eval mode act is : {skill.shape}, obs shape is : {obs.shape}")
-                    action = self.self.sac_agent.act(obs, skill, sample=True)
+                    action = self.self.diayn_agent_new.act(obs, skill, sample=True)
 
             # run training update
             if self.step >= self.cfg.num_seed_steps:
@@ -189,7 +189,7 @@ class Workspace(object):
 
                 #ADDING INFORMATION TO THE UPDATE FUNCTION FOR DIAYN
 
-                self.self.sac_agent.update(self.replay_buffer, self.logger, self.step)
+                self.self.diayn_agent_new.update(self.replay_buffer, self.logger, self.step)
 
 
             # print(f"The size of the action after act is: {action.size}")

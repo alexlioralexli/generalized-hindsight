@@ -220,6 +220,11 @@ def diayn_multitask_rollout_with_relabeler(
             
             with eval_mode(agent):
                 # print(f"Agent received for action: {agent}")
+                """
+                    Try with sample = False
+
+                """
+
                 action = agent.act(o, skill, sample=True)
         elif rollType == "evaluation":
             action = env.action_space.sample()
@@ -303,7 +308,7 @@ def diayn_multitask_rollout_with_relabeler(
         done_no_max.append(d_new)
         skills.append(skill)
         if d:
-            print(f"I am in d")
+            # print(f"I am in d")
             break
 
         #SWITCH OBS
@@ -348,7 +353,7 @@ def diayn_multitask_rollout_with_relabeler(
     if len(rgb_array) > 0 and rgb_array[0] is not None:
         result['rgb_array'] = np.array(rgb_array)
 
-    print(f"len result in rollouts for DIAYN is: {len(result)}")
+    # print(f"len result in rollouts for DIAYN is: {len(result)}")
     return result
 
 
@@ -441,13 +446,13 @@ def multitask_rollout_with_relabeler(
     
         """
         a, agent_info = agent.get_action(o, latent_input, **get_action_kwargs)
-        print(f"Action in VANILLA GHER is: {a}, type is : {type(a)}")
+        # print(f"Action in VANILLA GHER is: {a}, type is : {type(a)}")
         next_o, r, d, env_info = env.step(a)
         # print(f"The next_obs is : {}")
         if calculate_r_d:
             r, d_new = relabeler.reward_done(o, a, latent, env_info)
 
-        print(f"d in GHER: {d}, d_new is: {d_new} path len is: {path_length}")
+        # print(f"d in GHER: {d}, d_new is: {d_new} path len is: {path_length}")
         d = d or d_new
         rewards.append(r)
         if hasattr(env, 'env'):

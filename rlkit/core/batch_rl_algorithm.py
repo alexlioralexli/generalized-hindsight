@@ -10,6 +10,7 @@ from rlkit.samplers.data_collector import PathCollector
 class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
     def __init__(
             self,
+            logger,
             agent,
             exploration_env,
             evaluation_env,
@@ -47,6 +48,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
         self.num_expl_steps_per_train_loop = num_expl_steps_per_train_loop
         self.min_num_steps_before_training = min_num_steps_before_training
         self.work_dir = os.getcwd()
+        self.logger = logger
     def _train(self):
 
         """
@@ -62,7 +64,6 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             path_length < max_path_length
 
         """ 
-        self.recordEpoch = [10, 100, 500, 1000, 2500, 5000, 10000]
         # print(f"min num steps before training: {self.min_num_steps_before_training}")
         if self.min_num_steps_before_training > 0:
             init_expl_paths = self.expl_data_collector.collect_new_paths(
@@ -170,7 +171,7 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                     # print(f"Next_obs shape is: {next_obs.shape}")
                     # print(f"The obs data is: {next_obs}")
                         # THE NETWORKS ARE UPDATED HERE. SO DIAYN WILL BE TIED UP HERE.
-                    self.trainer.train(train_data, step, epoch)
+                    self.trainer.train(train_data, step, epoch, self.logger)
                 # if hasattr(self.trainer, '_base_trainer'):
                 #     self.trainer._base_trainer._update_target_networks()
                 # else:
@@ -181,13 +182,13 @@ class DIAYNBatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 # self.training_mode(False)
             self._end_epoch(epoch)
         # Already taken care of in _end_epoch
-        #     if epoch in self.recordEpoch:
-        #         print(f"Pickling: {epoch}")
-        #         filePathSave = self.work_dir + "/" + str(epoch) + ".pkl"
-        #         torch.save(self.agent,filePathSave)    
+            if epoch % 500 == 0:
+                print(f"Pickling: {epoch}")
+                filePathSave = self.work_dir + "/" + str(epoch) + "_agent" + ".pkl"
+                torch.save(self.agent,filePathSave)    
 
-        # filePathSave = self.work_dir + "/finalModel.pkl"
-        # torch.save(self.agent,filePathSave)
+        filePathSave = self.work_dir + "/finalModel.pkl"
+        torch.save(self.agent,filePathSave)
 
 
 class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):

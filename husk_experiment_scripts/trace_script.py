@@ -1,8 +1,31 @@
 #!/usr/bin/env python3
+
+
+"""
+
+Adapted from:
+
+@article{haarnoja2017soft,
+  title={Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor},
+  author={Haarnoja, Tuomas and Zhou, Aurick and Abbeel, Pieter and Levine, Sergey},
+  booktitle={Deep Reinforcement Learning Symposium},
+  year={2017}
+}
+
+
+
+
+
+
+"""
+
+
+
+
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+# import torch as nn
+# import torch.nn.functional as F
 import copy
 import math
 import os
@@ -10,58 +33,19 @@ import sys
 import time
 import pickle as pkl
 
-from video import VideoRecorder
-from logger import Logger
-from replay_buffer import ReplayBuffer
+
 import utils
 
-import dmc2gym
-import hydra
 import argparse
 
 # Import the environments
 
 # envs
-import gym
-from gym.spaces import Discrete, MultiBinary
-from rlkit.envs.point_robot_new import PointEnv as PointEnv2
-from rlkit.envs.point_reacher_env import PointReacherEnv
-from rlkit.envs.updated_half_cheetah import HalfCheetahEnv
-from rlkit.envs.wrappers import NormalizedBoxEnv, TimeLimit
-from rlkit.envs.fetch_reach import FetchReachEnv
-# from rlkit.envs.updated_ant import AntEnv
+
 
 NUM_GPUS_AVAILABLE = 4  # change this to the number of gpus on your system
 
 
-
-
-def make_env(cfg):
-    """Helper function to create dm_control environment"""
-    if cfg.env == 'ball_in_cup_catch':
-        domain_name = 'ball_in_cup'
-        task_name = 'catch'
-    else:
-        domain_name = cfg.env.split('_')[0]
-        task_name = '_'.join(cfg.env.split('_')[1:])
-
-    gym_envList = ["AntEnv", "HalfCheetahEnv", "PointEnv2", "PointReacherEnv"]
-
-    if cfg.env in gym_envList:
-        env = gym.make(domain_name=domain_name,
-                        task_name=task_name,
-                        seed=cfg.seed,
-                        visualize_reward=True)
-    else:
-        env = dmc2gym.make(domain_name=domain_name,
-                        task_name=task_name,
-                        seed=cfg.seed,
-                        visualize_reward=True)
-    env.seed(cfg.seed)
-    assert env.action_space.low.min() >= -1
-    assert env.action_space.high.max() <= 1
-
-    return env
 
 
 class Workspace(object):
@@ -138,8 +122,19 @@ class Workspace(object):
         #LOOP THROUGH THE SKILL. 
         #OBSERVE FROM IT
         # SAMPLE THE ACTIONS
-        
-        skill_array = [[1.0, 0.0, 0.0, 0.0], [0.0,1.0,0.0,0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
+        if self.args.type_skill == "DISCRETE":
+            if self.args.num_skills == 4:
+                skill_array = [[1.0, 0.0, 0.0, 0.0], [0.0,1.0,0.0,0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
+            elif self.args.num_skills == 6:
+                skill_array = [
+                    [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                ]
+
         # Convert skill array to tensor
         skill_tensor = torch.tensor(skill_array).to("cuda")
         palette = sns.color_palette('hls', self.args.num_skills)
@@ -155,8 +150,13 @@ class Workspace(object):
                     obs_vec = [obs]
                 
                 for t in range(self.args.max_path_length):
+
+                    """
+                        SAMPLE IS TRUE in train.py
+
+                    """
                     
-                    action = self.agent.act(obs, current_skill,sample=True)
+                    action = self.agent.act(obs, current_skill ,sample=True)
                     (next_obs, _, _, _) = self.env.step(action)
                     if args.use_qpos:
                         qpos = self.env.wrapped_env.env.model.data.qpos[:, 0]
@@ -195,6 +195,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, default=None, help='Path to the snapshot file.')
     parser.add_argument('--env', type=str, default="AntEnv", help='Environment on RLKIT')
+    parser.add_argument('--type_skill', type=str, default="DISCRETE", help='Environment on RLKIT')
+
     parser.add_argument('--max-path-length', '-l', type=int, default=1000)
     parser.add_argument('--n_paths', type=int, default=1)
     parser.add_argument('--dim_0', type=int, default=0)

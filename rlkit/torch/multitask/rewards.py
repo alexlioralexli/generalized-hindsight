@@ -85,9 +85,9 @@ class Relabeler(object):
             reward_list = np.arange(len(rewards))
             
             multipliers = np.power(self.discount, np.arange(len(rewards)))
-            print(f"Multipliers in GHER: {multipliers}")
+            print(f"Multipliers in GHER: {multipliers}, its shape is : {multipliers.shape}")
             result = np.sum(rewards * multipliers)
-            print(f"Result in GHER: {result}")
+            print(f"Result in GHER: {result}, its shape is: {result.shape}")
             return np.sum(rewards * multipliers)
 
     def get_discounted_path_reward(self, path, latent):
@@ -96,6 +96,9 @@ class Relabeler(object):
         # print(f"Latent received in get_discounted_path_Reward: {latent}")
         if self.alg == "SAC":
             path_rewards = self.calculate_path_reward(path, latent)
+            disc_reward = self.get_discounted_reward(path_rewards)
+            print(f"Get discounted path reward is: {disc_reward}, its shape is: {disc_reward.shape}")
+            
             return self.get_discounted_reward(path_rewards)
         elif self.alg == "DIAYN":
             # print(f"Path in discounted path reward is: {path}")
@@ -118,6 +121,7 @@ class Relabeler(object):
 
     def get_baseline_estimates(self, obs, latents):
         v1, v2 = self.get_both_values(obs, latents)
+        print(f"Both values are: {v1}, {v1.shape}, {v2}, {v2.shape}")
         return np.minimum(v1, v2)
 
     def get_both_values(self, obs, latents):
@@ -125,9 +129,10 @@ class Relabeler(object):
         # print(f"VALUES IN GET BOTH VALUES obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
         # print(f"VALUES IN GET BOTH VALUES : {self.alg}")
         if self.alg == "SAC":
+            print(f"VALUES IN GET BOTH VALUES obs in get both values in GHER: {obs}, latent : {latent}")
+
             obs, latent = ptu.from_numpy(obs).unsqueeze(0).repeat(len(latents), 1), ptu.from_numpy(latents)
             
-            print(f"VALUES IN GET BOTH VALUES obs in get both values in GHER: {obs}, latent : {latent}")
             print(f"AFTER RESHAPE")
             print(f"VALUES IN GET BOTH VALUES latent is : {type(latent)}, its shape is : {latent.shape}, print for latent : {latent}")
             # print(f"obs is : {type(obs)}, its shape is : {obs.shape}, print for obs : {obs}")
@@ -283,7 +288,7 @@ class RandomRelabeler(Relabeler):
 
     def get_best_skill(self, fitSkills):
         return fitSkills[0]
-    def calculate_fitness(self, rho, new_skills, paths):
+    def calculate_fitness(self, rho, new_skills, path):
         """
             1. How do we collect the reward? Env or Diversity Reward?
             2. How do we sample the action? 
@@ -296,10 +301,16 @@ class RandomRelabeler(Relabeler):
         # Find the rewards
         print(f"New skills are: {new_skills}")
         reward_list = [self.calculate_path_reward(path, latent, True) for latent in new_skills]
-        original_z = path['skill'][0]
+        print(f"The reward list is: {reward_list}")
         import math
         rho_filter = math.floor(len(ranks) * rho)
-        best_skills = new_skills.argsort()[-rho_filter:][::-1]
+        reward_list_sorted_filtered = reward_list.argsort()[-rho_filter:][::-1]    
+        print(f"reward list sorted and filtered: {reward_list_sorted_filtered}")
+        best_skills = []
+        for index in reward_list_sorted_filtered:
+            best_skills.append(new_skills[index])
+
+        return numpy.array(best_skills)
         
         # SELECT RHO
 
@@ -313,13 +324,13 @@ class RandomRelabeler(Relabeler):
 
         """
 
-    def skill_distribution(self, mu, std):
+    def skill_distribution(self, mu, std, type = "Normal"):
         # This can be a new SKILL DISTRIBUTION OBJECT. It doesn't need to be the agent's
         # Since, it will sample from Normal, so it doesn't matter.c
         resultant = torch.empty(self.skill_dim).normal_(mean=mu,std=std) 
         return resultant
 
-    def cem_relabeler(self, path, rho=0.1, k=5,n=100):
+    def cem_relabeler(self, paths, rho=0.1, k=5,n=100):
         """
             *NOTES:
 
@@ -357,25 +368,27 @@ class RandomRelabeler(Relabeler):
         """
         # K-Generations
         best_skills_for_path = []
-        original_skill = path["skill"][0]
-        for _ in range(k+1):
-            # Skill distribution is Normal. Original is Uniform. 
-            # For Continous 
-            new_skills = [self.skill_distribution(mu, std) for _ in range(n-1)]
-            #Fitness: From DIAYN or Env?
-            # Is discounted reward okay?
-            fitness = self.calculate_fitness(rho, new_skills, path)
-            mu, variance, std = torch.mean(fitness), torch.var(fitness), torch.std(fitness)
-        print(f"The final fitness in generation: {fitness}")
+        
+        for path in paths:
+            for _ in range(k):
+                # original_skill = path["skill"][0]
+                # Skill distribution is Normal. Original is Uniform. 
+                # For Continous 
+                new_skills = [self.skill_distribution(mu, std) for _ in range(n-1)]
+                #Fitness: From DIAYN or Env?
+                # Is discounted reward okay?
+                fitness = self.calculate_fitness(rho, new_skills, path)
+                mu, variance, std = torch.mean(fitness), torch.var(fitness), torch.std(fitness)
+            best_skill = get_best_skill(fitness)
+            best_skills_for_path.append(best_skill)
+        
         
         """
             In the end is there one best skill, or again the rho? 
 
         """
         
-        best_skill = get_best_skill(fitness)
-        best_skills_for_path.append(best_skill)
-        best_skills_for_path.append(orig_skill)
+       
         if self.alg == "DIAYN":
             # print(f"I am inside DIAYN, the best_latents are: {best_latents}")
             return [[z] for z in best_skills_for_path], \
@@ -441,7 +454,7 @@ class RandomRelabeler(Relabeler):
         
         
         if self.cache:
-            print(f"I am in cache")
+            # print(f"I am in cache")
             #new_paths = remove_extra_trajectory_info(paths)
             self.cached_paths = (paths + self.cached_paths)[:500]
             reward_matrix = self.get_reward_matrix(self.cached_paths, latents)

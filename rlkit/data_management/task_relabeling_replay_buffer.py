@@ -400,7 +400,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                 if self.alg == "SAC":
 
                     latents, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
-                    print(f"Len of latents are: {latents}")
+                    print(f"Latents and rewards a")
                 elif self.alg == "DIAYN":
                     skills, rewards = self.relabeler.normalize_path_returns(paths, use_grid=self.grid_normalize)  #latents should be a list of lists, same for rewards
 
@@ -429,7 +429,8 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
                 elif self.approx_irl:
                     if self.alg == "SAC":
                         latents, rewards = self.relabeler.approx_irl_relabeling(paths)
-                        print(f"Latents receievd after IRL relabeling are: {latents}, its length is : {len(latents)}")
+                        print(f"Latents receievd after IRL relabeling are: {latents}, its length is : {latents.shape}")
+                        print(f"Rewards received after IRL relabeling : {rewards}, its shape: {rewards.shape}")
                     elif self.alg == "DIAYN":
                         skills, rewards = self.relabeler.approx_irl_relabeling(paths)
                         print(f"The skill received after IRL relabeleing is: {skills}")
@@ -546,7 +547,7 @@ class MultiTaskReplayBuffer(SimpleReplayBuffer):
             
             
             elif self.alg == "DIAYN":
-                print(f"Skill list is: {skills}")
+                # print(f"Skill list is: {skills}")
                 random_z = None
                 for path, reward_list, skill_list in zip(paths, rewards, skills):
                     assert len(reward_list) == len(skill_list)
