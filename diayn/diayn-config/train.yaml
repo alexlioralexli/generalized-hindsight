@@ -1,0 +1,88 @@
+defaults:
+    - agent: diayn_gher
+
+env:  AntEnv
+
+
+
+#env: square
+
+# this needs to be specified manually
+experiment: HUSK-ANT-S1-DISCRETE-AIR
+
+num_train_steps: 5000000
+replay_buffer_capacity: ${num_train_steps}
+
+num_seed_steps: 5000
+
+eval_frequency: 10000
+num_eval_episodes: 0
+
+device: cuda
+
+# logger
+log_frequency: 10000
+log_save_tb: true
+
+# video recorder
+save_video: true
+
+
+seed: 1
+
+
+max_replay_buffer_size : ${num_train_steps}
+
+
+# GHER ARGPARSERS. SETTING THEM UP WITH DEFAULT VALUES:
+
+alg: DIAYN
+#THIS DOES NOT SET SKILL DIM FOR OVERALL, IT JUST FOR SOME LOGIC.
+skill_dim: 4
+n_sampled_latents : 5
+n_to_take: 1
+relabel: true
+use_advantages: false
+random_relabel: false
+cem: false
+irl: true
+plot: false
+cache : true
+sparse: None
+ngradsteps: 100
+nexpl: 1000
+horizon: None
+tau: 5e-3
+lr: 0.003
+qf_lr : 0.003
+buffer_size: 5e6
+discount : 0.99
+gpu : 0
+ec2: false
+local_docker: false
+reward_scale : Null 
+insert_time: false
+latent_shape_multiplier : 1
+latent_to_all_layers: false
+n_experiments: -1 
+exp_name: DIAYN-GHER-ANTENV-SEED1
+extra: SEED_1
+test: false
+epochs: 2
+save_videos: false
+safetyfn: newlog
+energyfn: velocity
+energyfactor: 1.0
+truncate_obs: true 
+use_xy: true 
+contact_forces: true 
+directiontype : 360
+# latent_dim: 3
+
+
+
+# hydra configuration
+hydra:
+    name: ${env}
+    run:
+        dir: ./exp/${now:%Y.%m.%d}/${now:%H%M}_${agent.name}_${experiment}

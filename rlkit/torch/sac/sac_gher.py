@@ -92,6 +92,10 @@ class SACTrainer(TorchTrainer):
         # obs = torch.cat([obs, latents], dim=1)
         # next_obs = torch.cat([next_obs, latents], dim=1)
 
+        print(f"VALUES IN SAC_GHER")
+        print(f"Rewards: {rewards},  latents: {latents}")
+        print(f"Shape of rewards: {rewards.shape}. obs shape: {obs.shape}, latents: {latents.shape}")
+
         """
         Policy and Alpha Loss
         """
@@ -196,7 +200,7 @@ class SACTrainer(TorchTrainer):
             ))
             self.eval_statistics.update(create_stats_ordered_dict(
                 'Policy log std',
-                ptu.get_numpy(policy_log_std),
+                ptu.get_numpy(policy_log_std), 
             ))
             if self.use_automatic_entropy_tuning:
                 self.eval_statistics['Alpha'] = alpha.item()

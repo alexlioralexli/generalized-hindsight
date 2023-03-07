@@ -31,7 +31,6 @@ class ContinuousRelabeler(RandomRelabeler):
         return np.array([self.get_features(path) for path in paths])
 
 
-
 class MountainCarRelabeler(ContinuousRelabeler):
     def __init__(self, dim=1, low=0.0, high=1.0, **kwargs):
         assert dim == 1

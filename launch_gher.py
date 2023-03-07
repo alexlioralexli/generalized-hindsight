@@ -1,6 +1,11 @@
 """
 Launcher for experiments for Generalized Hindsight Experience Replay
 """
+
+
+
+
+
 import torch
 import argparse
 import rlkit.torch.pytorch_util as ptu
@@ -30,8 +35,9 @@ from rlkit.envs.wrappers import NormalizedBoxEnv, TimeLimit
 from rlkit.envs.fetch_reach import FetchReachEnv
 from rlkit.envs.updated_ant import AntEnv
 
-NUM_GPUS_AVAILABLE = 4  # change this to the number of gpus on your system
-
+NUM_GPUS_AVAILABLE = 1  # change this to the number of gpus on your system
+import time 
+import torch
 
 def experiment(variant):
     set_seed(int(variant['seed']))
@@ -44,7 +50,7 @@ def experiment(variant):
         expl_env = NormalizedBoxEnv(PointEnv2(**variant['env_kwargs']))
         eval_env = NormalizedBoxEnv(PointEnv2(**variant['env_kwargs']))
         relabeler_cls = PointMassBestRandomRelabeler
-    elif variant['env_name'] in {'antdirectionnewsparse'}:
+    elif variant['env_name'] == "AntEnv":
         print(variant['env_name'])
         expl_env = NormalizedBoxEnv(AntEnv(**variant['env_kwargs']))
         eval_env = NormalizedBoxEnv(AntEnv(**variant['env_kwargs']))
@@ -157,7 +163,10 @@ def experiment(variant):
         replay_buffer=replay_buffer,
         **variant['algo_kwargs']
     )
+    print(f"DEVICE IS: {ptu.device}")
     algorithm.to(ptu.device)
+    print("the number of cpu threads: {}".format(torch.get_num_threads()))
+
     algorithm.train()
 
 if __name__ == "__main__":
@@ -287,7 +296,7 @@ if __name__ == "__main__":
         variant['algo_kwargs']['batch_size'] = 128
         variant['qf_kwargs']['hidden_sizes'] = [400, 300]
         variant['policy_kwargs']['hidden_sizes'] = [400, 300]
-    elif args.env in {'antdirectionnewsparse'}:
+    elif args.env == "AntEnv":
         variant['replay_buffer_kwargs']['latent_dim'] = 1
         if args.env in {'antdirectionnewsparse'}:
             assert args.directiontype in {'90', '180', '360'}
@@ -398,5 +407,6 @@ if __name__ == "__main__":
                            region='us-west-1',
                            num_exps_per_instance=1)
         else:
+            print("I AM INSIDE THE CURRENT IF STATEMENT IN LAUNCH GHER")
             setup_logger(exp_dir, variant=variant, seed=variant['seed'], **logger_kwargs)
             experiment(variant)

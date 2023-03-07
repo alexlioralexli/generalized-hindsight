@@ -294,8 +294,16 @@ class Logger(object):
                     file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
                     torch.save(params, file_name)
             elif self._snapshot_mode == "gap_and_last":
+                print(f"Itr received is: {itr}")
+                print(f"snapshot gap is: {self._snapshot_gap}")
+                self._snapshot_gap = 100
                 if itr % self._snapshot_gap == 0:
+                    print(f"Snapshot dir is: {self._snapshot_dir}")
+
                     file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
+                    # print(f"Params are : {params}")
+                    # print(f"CUDA value : {torch.cuda.device_count()}")
+                    print(f"SAVE FILE IN: {file_name}")
                     torch.save(params, file_name)
                 file_name = osp.join(self._snapshot_dir, 'params.pkl')
                 torch.save(params, file_name)

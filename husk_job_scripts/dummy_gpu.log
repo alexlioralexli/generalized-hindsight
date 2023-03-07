@@ -1,0 +1,54 @@
+[2022-06-05 21:48:04,329] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45556 Used: 0
+[2022-06-05 21:48:04,329] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:48:43,018] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 44473 Used: 1083
+[2022-06-05 21:48:43,018] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:49:20,653] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:49:20,653] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:49:58,297] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:49:58,297] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:50:35,936] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:50:35,937] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:51:13,569] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:51:13,570] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:51:51,199] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:51:51,200] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:52:28,835] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:52:28,836] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:53:06,480] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:53:06,480] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:53:44,120] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:53:44,120] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:54:21,762] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:54:21,763] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:54:59,399] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:54:59,400] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:55:37,021] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:55:37,021] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:56:14,669] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:56:14,669] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:56:52,309] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:56:52,310] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:57:29,935] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:57:29,935] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:58:07,583] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:58:07,583] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:58:45,208] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:58:45,208] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 21:59:22,843] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 21:59:22,844] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 22:00:00,487] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 22:00:00,488] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 22:00:38,135] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 22:00:38,135] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 22:01:15,763] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 22:01:15,763] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 22:01:53,399] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 22:01:53,399] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 22:02:31,026] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 22:02:31,026] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 22:03:08,663] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 22:03:08,663] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 22:03:46,307] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 22:03:46,308] dummy_gpu.py [D] Running dummy GPU job for 30 seconds
+[2022-06-05 22:04:23,953] dummy_gpu.py [I] GPU Stats: Total: 45556, Free: 45074 Used: 482
+[2022-06-05 22:04:23,954] dummy_gpu.py [D] Running dummy GPU job for 30 seconds

@@ -1,0 +1,68 @@
+PARAMETERS:
+
+DIAYN:
+parms are : {'trainer/policy': Sequential(
+  (0): Linear(in_features=117, out_features=1024, bias=True)
+  (1): ReLU(inplace=True)
+  (2): Linear(in_features=1024, out_features=1024, bias=True)
+  (3): ReLU(inplace=True)
+  (4): Linear(in_features=1024, out_features=16, bias=True)
+), 'trainer/qf1': Sequential(
+  (0): Linear(in_features=125, out_features=1024, bias=True)
+  (1): ReLU(inplace=True)
+  (2): Linear(in_features=1024, out_features=1024, bias=True)
+  (3): ReLU(inplace=True)
+  (4): Linear(in_features=1024, out_features=1, bias=True)
+), 'trainer/qf2': Sequential(
+  (0): Linear(in_features=125, out_features=1024, bias=True)
+  (1): ReLU(inplace=True)
+  (2): Linear(in_features=1024, out_features=1024, bias=True)
+  (3): ReLU(inplace=True)
+  (4): Linear(in_features=1024, out_features=1, bias=True)
+), 'trainer/target_qf1': Sequential(
+  (0): Linear(in_features=125, out_features=1024, bias=True)
+  (1): ReLU(inplace=True)
+  (2): Linear(in_features=1024, out_features=1024, bias=True)
+  (3): ReLU(inplace=True)
+  (4): Linear(in_features=1024, out_features=1, bias=True)
+), 'trainer/target_qf2': Sequential(
+  (0): Linear(in_features=125, out_features=1024, bias=True)
+  (1): ReLU(inplace=True)
+  (2): Linear(in_features=1024, out_features=1024, bias=True)
+  (3): ReLU(inplace=True)
+  (4): Linear(in_features=1024, out_features=1, bias=True)
+), 'exploration/env': <rlkit.envs.wrappers.NormalizedBoxEnv object at 0x14dcfc713e48>, 'exploration/policy': Sequential(
+  (0): Linear(in_features=117, out_features=1024, bias=True)
+  (1): ReLU(inplace=True)
+  (2): Linear(in_features=1024, out_features=1024, bias=True)
+  (3): ReLU(inplace=True)
+  (4): Linear(in_features=1024, out_features=16, bias=True)
+), 'evaluation/env': <rlkit.envs.wrappers.NormalizedBoxEnv object at 0x14dc8300ea90>, 'evaluation/policy': <rlkit.torch.sac.policies.MakeDeterministicLatentPolicy object at 0x14dc80d77d68>, 'replay_buffer/relabeler': <diayn.diayn_relabelers.diayn_ant_relabeler.DIAYNAntDirectionRelabelerNewSparse object at 0x14dc80d77da0>}
+GHER : 
+parms are : {'trainer/policy': LatentConditionedTanhGaussianPolicy(
+  (fc0): Linear(in_features=28, out_features=256, bias=True)
+  (fc1): Linear(in_features=256, out_features=256, bias=True)
+  (last_fc): Linear(in_features=256, out_features=8, bias=True)
+  (last_fc_log_std): Linear(in_features=256, out_features=8, bias=True)
+), 'trainer/qf1': LatentConditionedMlp(
+  (fc0): Linear(in_features=36, out_features=256, bias=True)
+  (fc1): Linear(in_features=256, out_features=256, bias=True)
+  (last_fc): Linear(in_features=256, out_features=1, bias=True)
+), 'trainer/qf2': LatentConditionedMlp(
+  (fc0): Linear(in_features=36, out_features=256, bias=True)
+  (fc1): Linear(in_features=256, out_features=256, bias=True)
+  (last_fc): Linear(in_features=256, out_features=1, bias=True)
+), 'trainer/target_qf1': LatentConditionedMlp(
+  (fc0): Linear(in_features=36, out_features=256, bias=True)
+  (fc1): Linear(in_features=256, out_features=256, bias=True)
+  (last_fc): Linear(in_features=256, out_features=1, bias=True)
+), 'trainer/target_qf2': LatentConditionedMlp(
+  (fc0): Linear(in_features=36, out_features=256, bias=True)
+  (fc1): Linear(in_features=256, out_features=256, bias=True)
+  (last_fc): Linear(in_features=256, out_features=1, bias=True)
+), 'exploration/env': <rlkit.envs.wrappers.NormalizedBoxEnv object at 0x1520c8fd8eb8>, 'exploration/policy': LatentConditionedTanhGaussianPolicy(
+  (fc0): Linear(in_features=28, out_features=256, bias=True)
+  (fc1): Linear(in_features=256, out_features=256, bias=True)
+  (last_fc): Linear(in_features=256, out_features=8, bias=True)
+  (last_fc_log_std): Linear(in_features=256, out_features=8, bias=True)
+), 'evaluation/env': <rlkit.envs.wrappers.NormalizedBoxEnv object at 0x1520c8fd8208>, 'evaluation/policy': <rlkit.torch.sac.policies.MakeDeterministicLatentPolicy object at 0x1520c8fe17f0>, 'replay_buffer/relabeler': <rlkit.torch.multitask.ant_direction_relabeler.AntDirectionRelabelerNewSparse object at 0x1520c8fe1a58>}
